@@ -1,4 +1,5 @@
 import { getFeatureFlags } from '@/app/posthog';
+import { isQuestionnaireFeatureEnabled } from '@/lib/questionnaire-feature';
 import { AppOnboarding } from '@/components/app-onboarding';
 import PageWithBreadcrumb from '@/components/pages/PageWithBreadcrumb';
 import { serverApi } from '@/lib/api-server';
@@ -25,7 +26,7 @@ export default async function NewQuestionnairePage() {
   }
 
   const flags = await getFeatureFlags(session.user.id);
-  const isFeatureEnabled = flags['ai-vendor-questionnaire'] === true;
+  const isFeatureEnabled = isQuestionnaireFeatureEnabled(flags);
 
   if (!isFeatureEnabled) {
     return notFound();
