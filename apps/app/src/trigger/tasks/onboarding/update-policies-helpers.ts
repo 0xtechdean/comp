@@ -1,4 +1,4 @@
-import { createGatewayProvider } from '@ai-sdk/gateway';
+import { openai } from '@ai-sdk/openai';
 import { db, FrameworkEditorFramework, FrameworkEditorPolicyTemplate, type Policy } from '@db/server';
 import type { JSONContent } from '@tiptap/react';
 import { logger } from '@trigger.dev/sdk';
@@ -6,9 +6,9 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 import { processTemplate } from './process-policy-template';
 
-const gateway = createGatewayProvider({
-  baseURL: process.env.AI_GATEWAY_BASE_URL,
-});
+// Self-host: route the gateway model id (anthropic/claude-sonnet-4.6) to OpenAI
+// directly so policy generation runs on OPENAI_API_KEY, not AI_GATEWAY_API_KEY.
+const gateway = (_modelId: string) => openai('gpt-4.1-mini');
 
 const CUE_LINE_PATTERN =
   /^(State that|Clarify that|Add a |Include a |Specify |List |Note that|Require that|Describe |Define )/;

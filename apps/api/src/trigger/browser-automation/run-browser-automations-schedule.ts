@@ -92,7 +92,8 @@ export function limitAutomationBatch<
  */
 export const browserAutomationsSchedule = schedules.task({
   id: 'browser-automations-schedule',
-  cron: '0 5 * * *', // Daily at 5:00 AM UTC
+  // Self-hosted: declarative cron disabled to stay within trigger.dev free-tier schedule limit
+  // cron: '0 5 * * *', // Daily at 5:00 AM UTC
   maxDuration: 60 * 30, // 30 minutes — Trigger.dev maxDuration is in SECONDS
   run: async (payload) => {
     logger.info('Starting daily browser automations orchestrator', {

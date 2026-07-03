@@ -10,6 +10,7 @@ import { AzureSecurityService } from './providers/azure-security.service';
 import { AWS_SERVICE_TASK_MAPPINGS } from './aws-task-mappings';
 import { CloudReconciliationService } from './reconciliation.service';
 import { resolveAwsScanMode } from './aws-scan-mode';
+import { RAILWAY_SCAN_MODE, scanRailwaySecurityFindings } from './railway-scan';
 import {
   GCP_SCAN_MODE_DIRECT,
   GCP_SCAN_MODE_SCC,
@@ -329,6 +330,24 @@ export class CloudSecurityService {
             enabledServices,
           );
           break;
+        case 'railway': {
+          // Railway is an integration-platform provider whose checks run against
+          // the Railway GraphQL API, but it's surfaced on the Cloud Tests page,
+          // so the cloud-security engine orchestrates + persists the run.
+          runScanMode = RAILWAY_SCAN_MODE;
+          findings = await scanRailwaySecurityFindings({
+            credentials,
+            variables,
+            connectionId,
+            organizationId,
+            logger: {
+              info: (m, d) => this.logger.log(formatCheckLog(m, d)),
+              warn: (m, d) => this.logger.warn(formatCheckLog(m, d)),
+              error: (m, d) => this.logger.error(formatCheckLog(m, d)),
+            },
+          });
+          break;
+        }
         default:
           return {
             success: false,
