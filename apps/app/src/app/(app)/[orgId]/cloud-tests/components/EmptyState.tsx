@@ -22,7 +22,9 @@ import { ArrowLeft, CheckmarkFilled, Launch } from '@trycompai/design-system/ico
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
-type CloudProvider = 'aws' | 'gcp' | 'azure' | null;
+type CloudProvider = 'aws' | 'gcp' | 'azure' | 'railway' | null;
+/** Providers connected through ConnectIntegrationDialog rather than the legacy form. */
+type DialogProvider = 'aws' | 'gcp' | 'azure' | 'railway';
 type Step = 'choose' | 'connect' | 'validate-aws' | 'success';
 
 const CLOUD_PROVIDERS = [
@@ -53,6 +55,15 @@ const CLOUD_PROVIDERS = [
     logoUrl: 'https://img.logo.dev/azure.microsoft.com?token=pk_AZatYxV5QDSfWpRDaBxzRQ',
     guideUrl: 'https://trycomp.ai/docs/cloud-tests/azure',
   },
+  {
+    id: 'railway' as const,
+    name: 'Railway',
+    shortName: 'Railway',
+    description: 'Scan your Railway workspace for 2FA enforcement and public project exposure',
+    color: 'from-purple-600 to-fuchsia-700',
+    logoUrl: 'https://img.logo.dev/railway.app?token=pk_AZatYxV5QDSfWpRDaBxzRQ',
+    guideUrl: 'https://docs.railway.com/reference/public-api',
+  },
 ];
 
 interface ProviderFieldBase {
@@ -67,7 +78,7 @@ interface ProviderFieldWithOptions extends ProviderFieldBase {
   options?: { value: string; label: string }[];
 }
 
-const PROVIDER_FIELDS: Partial<Record<'aws' | 'gcp' | 'azure', ProviderFieldWithOptions[]>> = {
+const PROVIDER_FIELDS: Partial<Record<DialogProvider, ProviderFieldWithOptions[]>> = {
   aws: [
     {
       id: 'connectionName',
@@ -112,7 +123,11 @@ export function EmptyState({
   const api = useApi();
   const { hasPermission } = usePermissions();
   const canCreate = hasPermission('integration', 'create');
-  const initialUsesDialog = initialProvider === 'aws' || initialProvider === 'gcp' || initialProvider === 'azure';
+  const initialUsesDialog =
+    initialProvider === 'aws' ||
+    initialProvider === 'gcp' ||
+    initialProvider === 'azure' ||
+    initialProvider === 'railway';
   const [step, setStep] = useState<Step>(
     initialProvider && !initialUsesDialog ? 'connect' : 'choose',
   );
@@ -120,8 +135,14 @@ export function EmptyState({
     initialProvider && !initialUsesDialog ? initialProvider : null,
   );
   const [showConnectDialog, setShowConnectDialog] = useState(initialUsesDialog);
-  const [connectDialogProvider, setConnectDialogProvider] = useState<'aws' | 'gcp' | 'azure'>(
-    initialProvider === 'azure' ? 'azure' : initialProvider === 'gcp' ? 'gcp' : 'aws',
+  const [connectDialogProvider, setConnectDialogProvider] = useState<DialogProvider>(
+    initialProvider === 'azure'
+      ? 'azure'
+      : initialProvider === 'gcp'
+        ? 'gcp'
+        : initialProvider === 'railway'
+          ? 'railway'
+          : 'aws',
   );
   const [credentials, setCredentials] = useState<Record<string, string | string[]>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -130,14 +151,24 @@ export function EmptyState({
   const [awsAccountId, setAwsAccountId] = useState<string>('');
 
   useEffect(() => {
-    if (initialProvider === 'aws' || initialProvider === 'gcp' || initialProvider === 'azure') {
+    if (
+      initialProvider === 'aws' ||
+      initialProvider === 'gcp' ||
+      initialProvider === 'azure' ||
+      initialProvider === 'railway'
+    ) {
       setConnectDialogProvider(initialProvider);
       setShowConnectDialog(true);
     }
   }, [initialProvider]);
 
   const handleProviderSelect = (providerId: CloudProvider) => {
-    if (providerId === 'aws' || providerId === 'gcp' || providerId === 'azure') {
+    if (
+      providerId === 'aws' ||
+      providerId === 'gcp' ||
+      providerId === 'azure' ||
+      providerId === 'railway'
+    ) {
       setConnectDialogProvider(providerId);
       setShowConnectDialog(true);
       return;
@@ -409,18 +440,11 @@ export function EmptyState({
             onOpenChange={(open) => setShowConnectDialog(open)}
             integrationId={connectDialogProvider}
             integrationName={
-              connectDialogProvider === 'gcp'
-                ? 'Google Cloud Platform'
-                : connectDialogProvider === 'azure'
-                  ? 'Microsoft Azure'
-                  : 'Amazon Web Services'
+              CLOUD_PROVIDERS.find((cp) => cp.id === connectDialogProvider)?.name ??
+              connectDialogProvider
             }
             integrationLogoUrl={
-              connectDialogProvider === 'gcp'
-                ? 'https://img.logo.dev/cloud.google.com?token=pk_AZatYxV5QDSfWpRDaBxzRQ'
-                : connectDialogProvider === 'azure'
-                  ? 'https://img.logo.dev/azure.microsoft.com?token=pk_AZatYxV5QDSfWpRDaBxzRQ'
-                  : 'https://img.logo.dev/aws.amazon.com?token=pk_AZatYxV5QDSfWpRDaBxzRQ'
+              CLOUD_PROVIDERS.find((cp) => cp.id === connectDialogProvider)?.logoUrl ?? ''
             }
             onConnected={() => {
               setShowConnectDialog(false);
@@ -432,7 +456,10 @@ export function EmptyState({
         <div className="grid w-full gap-4 md:grid-cols-3">
           {CLOUD_PROVIDERS.filter(
             (cp) =>
-              cp.id === 'aws' || cp.id === 'azure' || !connectedProviders.includes(cp.id),
+              cp.id === 'aws' ||
+              cp.id === 'azure' ||
+              cp.id === 'railway' ||
+              !connectedProviders.includes(cp.id),
           ).map((cloudProvider) => (
             <Card
               key={cloudProvider.id}

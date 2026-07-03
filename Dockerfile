@@ -5,18 +5,32 @@ FROM oven/bun:1.2.8 AS deps
 
 WORKDIR /app
 
+# Prisma's query engine needs openssl/libssl at generate time; the bun
+# Debian-slim base ships without it, so install it before any prisma generate.
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
 # Copy workspace configuration
 COPY package.json bun.lock ./
 
-# Copy package.json files for all packages (exclude local db; use published @trycompai/db)
-COPY packages/kv/package.json ./packages/kv/
-COPY packages/ui/package.json ./packages/ui/
+# Copy package.json for ALL workspace packages so bun can resolve the full
+# workspace graph (apps/app + apps/portal depend transitively on db/auth/
+# company/billing/etc. via workspace:* — every referenced member must be present).
+COPY packages/analytics/package.json ./packages/analytics/
+COPY packages/auth/package.json ./packages/auth/
+COPY packages/billing/package.json ./packages/billing/
+COPY packages/company/package.json ./packages/company/
+COPY packages/db/package.json ./packages/db/
+COPY packages/device-agent/package.json ./packages/device-agent/
+COPY packages/docs/package.json ./packages/docs/
 COPY packages/email/package.json ./packages/email/
+COPY packages/framework-editor-cli/package.json ./packages/framework-editor-cli/
 COPY packages/integration-platform/package.json ./packages/integration-platform/
 COPY packages/integrations/package.json ./packages/integrations/
-COPY packages/utils/package.json ./packages/utils/
+COPY packages/kv/package.json ./packages/kv/
 COPY packages/tsconfig/package.json ./packages/tsconfig/
-COPY packages/analytics/package.json ./packages/analytics/
+COPY packages/ui/package.json ./packages/ui/
+COPY packages/utils/package.json ./packages/utils/
 
 # Copy app package.json files
 COPY apps/app/package.json ./apps/app/
@@ -120,9 +134,22 @@ COPY apps/portal ./apps/portal
 # Bring in node_modules for build and prisma prebuild
 COPY --from=deps /app/node_modules ./node_modules
 
-# Pre-combine schemas for portal build
-RUN cd packages/db && node scripts/combine-schemas.js
-RUN cp packages/db/dist/schema.prisma apps/portal/prisma/schema.prisma
+# Build the workspace packages the portal imports so @trycompai/* resolve to dist.
+# packages/db's build produces its dist + the Prisma client; combine-schemas then
+# guarantees dist/schema.prisma exists for the portal's own prisma schema copy.
+# Without building these, `next build` fails with "Module not found: @trycompai/*".
+RUN cd packages/db && bun run build
+# Copy the model .prisma files (NOT the generator/datasource schema.prisma) into
+# the portal's prisma schema dir so `prisma generate` produces a full client
+# (incl. Policy). Mirrors the API multistage; the portal's own schema.prisma
+# already supplies the generator + datasource blocks.
+RUN find packages/db/prisma/schema -name '*.prisma' ! -name 'schema.prisma' -exec cp {} apps/portal/prisma/schema/ \;
+RUN cd packages/auth && bun run build \
+ && cd ../analytics && bun run build \
+ && cd ../kv && bun run build \
+ && cd ../ui && bun run build \
+ && cd ../email && bun run build \
+ && cd ../company && bun run build
 
 # Ensure Next build has required public env at build-time
 ARG NEXT_PUBLIC_BETTER_AUTH_URL

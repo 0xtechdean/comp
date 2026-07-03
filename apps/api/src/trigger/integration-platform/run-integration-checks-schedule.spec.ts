@@ -55,6 +55,15 @@ jest.mock('./run-device-sync', () => ({
   runDeviceSync: { trigger: jest.fn() },
 }));
 
+// The orchestrator now also folds in the cloud-security scan orchestration.
+// Mock it so importing the orchestrator doesn't load the real cloud-security
+// schedule (which transitively calls task() at module load).
+jest.mock('../cloud-security/cloud-security-schedule', () => ({
+  orchestrateCloudSecurityScans: jest
+    .fn()
+    .mockResolvedValue({ success: true, connectionsTriggered: 0, totalConnections: 0 }),
+}));
+
 const atUtc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
 describe('filterDueTasks (integration orchestrator)', () => {

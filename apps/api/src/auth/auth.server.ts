@@ -33,6 +33,13 @@ const MAGIC_LINK_EXPIRES_IN_SECONDS = 60 * 60; // 1 hour
  * Determine the cookie domain based on environment.
  */
 function getCookieDomain(): string | undefined {
+  // Self-hosting: allow an explicit cross-subdomain cookie domain (e.g.
+  // ".anyray.ai") so sessions work across app/api/portal on a custom domain,
+  // not just the built-in trycomp.ai hosts.
+  if (process.env.AUTH_COOKIE_DOMAIN) {
+    return process.env.AUTH_COOKIE_DOMAIN;
+  }
+
   const baseUrl = process.env.BASE_URL || '';
 
   if (baseUrl.includes('staging.trycomp.ai')) {
@@ -98,15 +105,21 @@ export function isStaticTrustedOrigin(origin: string): boolean {
 const CORS_DOMAINS_CACHE_KEY = 'cors:custom-domains';
 const CORS_DOMAINS_CACHE_TTL_SECONDS = 5 * 60; // 5 minutes
 
-const corsRedisClient = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-});
+// Optional: only construct the Redis client when Upstash is configured.
+// Without it, custom-domain CORS lookups fall back to the DB directly and the
+// API still boots (self-hosting doesn't require Upstash).
+const corsRedisClient =
+  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+    ? new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      })
+    : null;
 
 async function getCustomDomains(): Promise<Set<string>> {
   // Try Redis cache first (non-fatal if Redis is unavailable)
   try {
-    const cached = await corsRedisClient.get<string[]>(CORS_DOMAINS_CACHE_KEY);
+    const cached = await corsRedisClient?.get<string[]>(CORS_DOMAINS_CACHE_KEY);
     if (cached) {
       return new Set(cached);
     }
@@ -131,7 +144,7 @@ async function getCustomDomains(): Promise<Set<string>> {
 
     // Best-effort cache update (don't lose DB results if Redis SET fails)
     try {
-      await corsRedisClient.set(CORS_DOMAINS_CACHE_KEY, domains, {
+      await corsRedisClient?.set(CORS_DOMAINS_CACHE_KEY, domains, {
         ex: CORS_DOMAINS_CACHE_TTL_SECONDS,
       });
     } catch {

@@ -10,7 +10,7 @@ export const CLOUD_PROVIDER_CATEGORY = 'Cloud';
 /**
  * Supported cloud provider slugs
  */
-export const CLOUD_PROVIDER_SLUGS = ['aws', 'gcp', 'azure'] as const;
+export const CLOUD_PROVIDER_SLUGS = ['aws', 'gcp', 'azure', 'railway'] as const;
 
 /**
  * Type for supported cloud provider slugs

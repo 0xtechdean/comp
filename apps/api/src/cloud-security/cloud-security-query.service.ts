@@ -15,7 +15,7 @@ import type {
 // path keep working (the controller imports them).
 export type { CloudFinding, CloudProvider, CloudProviderLatestRun };
 
-const CLOUD_PROVIDER_SLUGS = ['aws', 'gcp', 'azure'] as const;
+const CLOUD_PROVIDER_SLUGS = ['aws', 'gcp', 'azure', 'railway'] as const;
 
 /** Extract project ID from a GCP resource path like //iam.googleapis.com/projects/my-proj/... */
 function extractProjectIdFromResource(

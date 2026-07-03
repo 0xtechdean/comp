@@ -69,7 +69,9 @@ playground/
 .venv
 
 # Ignore lock files to prevent conflicts between different package managers
-bun.lock
+# NOTE: bun.lock is un-ignored so `railway up` includes it in the build upload
+# (the Dockerfiles do `COPY package.json bun.lock`). It is already git-tracked.
+# bun.lock
 yarn.lock
 
 # Playwright test results and reports
@@ -89,6 +91,11 @@ packages/*/dist
 # Generated Prisma Client
 **/src/db/generated/
 packages/db/prisma/src/generated/
+
+# Compiled TS output in prisma dirs (generated from the .ts sources; not committed)
+apps/*/prisma/schema/**/*.js
+apps/*/prisma/schema/**/*.d.ts
+apps/*/prisma/schema/**/*.d.ts.map
 
 # Release script
 scripts/sync-release-branch.sh

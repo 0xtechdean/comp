@@ -6,7 +6,7 @@ import { integrationPlatformExtension } from './integrationPlatformExtension';
 
 export default defineConfig({
   runtime: 'node-22',
-  project: 'proj_zhioyrusqertqgafqgpj', // API project
+  project: 'proj_dzyqivrfvsuewiwawhdt', // Self-hosted: dedicated "Anyray API" trigger project (app tasks live in proj_hdhglphenzmvuadarvrz)
   logLevel: 'log',
   maxDuration: 300, // 5 minutes
   build: {

@@ -40,6 +40,11 @@ FROM oven/bun:1.2.8 AS builder
 
 WORKDIR /app
 
+# Prisma's query engine needs openssl/libssl at generate time; the bun
+# Debian-slim base ships without it, so install it before any prisma generate.
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
 # Copy node_modules first (from deps stage), then source on top.
 # This avoids conflicts between workspace symlinks and local node_modules
 # that get included from the build context.

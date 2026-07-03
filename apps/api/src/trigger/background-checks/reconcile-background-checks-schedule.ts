@@ -213,7 +213,8 @@ export async function runReconciliation(): Promise<ReconciliationResult> {
  */
 export const reconcileBackgroundChecksSchedule = schedules.task({
   id: 'reconcile-background-checks-schedule',
-  cron: '0 * * * *', // hourly (UTC)
+  // Self-hosted: declarative cron disabled to stay within trigger.dev free-tier schedule limit
+  // cron: '0 * * * *', // hourly (UTC)
   maxDuration: 30 * 60, // 30 minutes — Trigger.dev maxDuration is in SECONDS
 
   run: () => runReconciliation(),

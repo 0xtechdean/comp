@@ -6,6 +6,7 @@ import {
   type OrgTaskCheck,
 } from './run-org-integration-checks';
 import { runDeviceSync } from './run-device-sync';
+import { orchestrateCloudSecurityScans } from '../cloud-security/cloud-security-schedule';
 import { isCheckDisabledForTask } from '../../integration-platform/utils/disabled-task-checks';
 import { isDueToday } from '../shared/is-due-today';
 
@@ -353,15 +354,40 @@ export const integrationChecksSchedule = schedules.task({
 
     logger.info(`Triggered ${deviceSyncsTriggered} device syncs`);
 
+    // === Cloud Security Scans ===
+    // Self-hosted keeps the dedicated `cloud-security-schedule` cron disabled to
+    // stay within the trigger.dev free-tier schedule limit, so the cloud-security
+    // orchestration (AWS, Railway, …) is folded in here. Failures must not mask
+    // the rest of this run — log and carry the flag into the return value.
+    let cloudScansTriggered = 0;
+    let cloudScanFailed = false;
+    try {
+      const cloudResult = await orchestrateCloudSecurityScans();
+      cloudScansTriggered = cloudResult.connectionsTriggered;
+      cloudScanFailed = !cloudResult.success;
+      logger.info(
+        `Triggered ${cloudScansTriggered} cloud security scan(s)`,
+        { totalConnections: cloudResult.totalConnections },
+      );
+    } catch (error) {
+      cloudScanFailed = true;
+      logger.error('Failed to orchestrate cloud security scans', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
     return {
       // Report failure when not every queued task was dispatched (via its org
-      // runner) OR a device-sync dispatch threw, so partial/failed runs aren't
-      // masked.
+      // runner) OR a device-sync dispatch threw OR the cloud-security
+      // orchestration failed, so partial/failed runs aren't masked.
       success:
-        tasksTriggered === tasksToRun.length && deviceSyncFailures === 0,
+        tasksTriggered === tasksToRun.length &&
+        deviceSyncFailures === 0 &&
+        !cloudScanFailed,
       tasksTriggered,
       orgsTriggered,
       deviceSyncsTriggered,
+      cloudScansTriggered,
     };
   },
 });

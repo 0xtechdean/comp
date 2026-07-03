@@ -22,12 +22,14 @@ const PROVIDER_LOGO: Record<string, string> = {
   aws: 'https://img.logo.dev/aws.amazon.com?token=pk_AZatYxV5QDSfWpRDaBxzRQ',
   gcp: 'https://img.logo.dev/cloud.google.com?token=pk_AZatYxV5QDSfWpRDaBxzRQ',
   azure: 'https://img.logo.dev/azure.microsoft.com?token=pk_AZatYxV5QDSfWpRDaBxzRQ',
+  railway: 'https://img.logo.dev/railway.app?token=pk_AZatYxV5QDSfWpRDaBxzRQ',
 };
 
 const PROVIDER_NAME: Record<string, string> = {
   aws: 'Amazon Web Services',
   gcp: 'Google Cloud Platform',
   azure: 'Microsoft Azure',
+  railway: 'Railway',
 };
 
 interface TestsLayoutProps {

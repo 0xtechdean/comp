@@ -1,4 +1,4 @@
-import { createGatewayProvider } from '@ai-sdk/gateway';
+import { openai } from '@ai-sdk/openai';
 import {
   Departments,
   FrameworkEditorFramework,
@@ -15,10 +15,11 @@ import { db } from '@db/server';
 import { logger, metadata, tasks } from '@trigger.dev/sdk';
 import { generateObject, jsonSchema } from 'ai';
 
-const gateway = createGatewayProvider({
-  baseURL: process.env.AI_GATEWAY_BASE_URL,
-});
-const ONBOARDING_MODEL = 'google/gemini-3-flash' as const;
+// Self-host: the onboarding AI was originally wired to the Vercel AI Gateway
+// (Gemini/Claude). Route the gateway model ids to OpenAI directly so generation
+// runs on OPENAI_API_KEY instead of requiring AI_GATEWAY_API_KEY.
+const ONBOARDING_MODEL = 'gpt-4.1-mini' as const;
+const gateway = (_modelId: string) => openai(ONBOARDING_MODEL);
 import axios from 'axios';
 import { z } from 'zod';
 import type { researchVendor } from '../scrape/research';
