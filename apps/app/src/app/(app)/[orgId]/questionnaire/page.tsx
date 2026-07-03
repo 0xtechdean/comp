@@ -1,5 +1,6 @@
 import { getFeatureFlags } from '@/app/posthog';
 import { serverApi } from '@/lib/api-server';
+import { isQuestionnaireFeatureEnabled } from '@/lib/questionnaire-feature';
 import { auth } from '@/utils/auth';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
@@ -81,7 +82,7 @@ export default async function SecurityQuestionnairePage() {
   }
 
   const flags = await getFeatureFlags(session.user.id);
-  const isFeatureEnabled = flags['ai-vendor-questionnaire'] === true;
+  const isFeatureEnabled = isQuestionnaireFeatureEnabled(flags);
 
   if (!isFeatureEnabled) {
     return notFound();

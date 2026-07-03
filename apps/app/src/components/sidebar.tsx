@@ -1,4 +1,5 @@
 import { getFeatureFlags } from '@/app/posthog';
+import { isQuestionnaireFeatureEnabled } from '@/lib/questionnaire-feature';
 import { APP_AWS_ORG_ASSETS_BUCKET, s3Client } from '@/app/s3';
 import { serverApi } from '@/lib/api-server';
 import type { OrganizationFromMe } from '@/types';
@@ -56,7 +57,7 @@ export async function Sidebar({
   let isTrustNdaEnabled = false;
   if (session?.user?.id) {
     const flags = await getFeatureFlags(session.user.id);
-    isQuestionnaireEnabled = flags['ai-vendor-questionnaire'] === true;
+    isQuestionnaireEnabled = isQuestionnaireFeatureEnabled(flags);
     isTrustNdaEnabled =
       flags['is-trust-nda-enabled'] === true || flags['is-trust-nda-enabled'] === 'true';
   }

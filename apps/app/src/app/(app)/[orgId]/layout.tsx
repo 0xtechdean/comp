@@ -1,4 +1,5 @@
 import { getFeatureFlags } from '@/app/posthog';
+import { isQuestionnaireFeatureEnabled } from '@/lib/questionnaire-feature';
 import { APP_AWS_ORG_ASSETS_BUCKET, s3Client } from '@/app/s3';
 import { TriggerTokenProvider } from '@/components/trigger-token-provider';
 import { serverApi } from '@/lib/api-server';
@@ -153,7 +154,7 @@ export default async function Layout({
         groups: { organization: organization.id },
       })
     : {};
-  const isQuestionnaireEnabled = featureFlags['ai-vendor-questionnaire'] === true;
+  const isQuestionnaireEnabled = isQuestionnaireFeatureEnabled(featureFlags);
   const isTrustNdaEnabled =
     featureFlags['is-trust-nda-enabled'] === true ||
     featureFlags['is-trust-nda-enabled'] === 'true';
