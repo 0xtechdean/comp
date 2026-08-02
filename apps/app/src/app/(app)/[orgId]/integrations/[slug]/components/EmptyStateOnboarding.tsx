@@ -1,6 +1,7 @@
 'use client';
 
 import { CloudShellSetup } from '@/components/integrations/CloudShellSetup';
+import { usesRedirectConnectFlow } from '@/lib/integration-auth';
 import { CredentialInput } from '@/components/integrations/CredentialInput';
 import type { IntegrationProvider } from '@/hooks/use-integration-platform';
 import { useIntegrationMutations } from '@/hooks/use-integration-platform';
@@ -232,7 +233,7 @@ export function EmptyStateOnboarding({
   onConnected,
   onOAuthConnect,
 }: EmptyStateOnboardingProps) {
-  const isOAuth = provider.authType === 'oauth2';
+  const isOAuth = usesRedirectConnectFlow(provider.authType);
   const isCloudProvider = provider.category === 'Cloud';
   const isComingSoon = isOAuth && provider.oauthConfigured === false;
 
