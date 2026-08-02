@@ -3,7 +3,7 @@ jest.mock('@db', () => ({ db: {} }));
 
 import { Test } from '@nestjs/testing';
 import { createPrivateKey, createPublicKey, createVerify, generateKeyPairSync } from 'node:crypto';
-import { GithubAppTokenService } from './github-app-token.service';
+import { GithubAppTokenService, normalizePrivateKey } from './github-app-token.service';
 import { OAuthAppRepository } from '../repositories/oauth-app.repository';
 import { PlatformCredentialRepository } from '../repositories/platform-credential.repository';
 import { CredentialVaultService } from './credential-vault.service';
@@ -265,5 +265,30 @@ describe('GithubAppTokenService', () => {
 describe('test fixture', () => {
   it('produces a usable RSA private key', () => {
     expect(() => createPrivateKey(PRIVATE_KEY_PEM)).not.toThrow();
+  });
+});
+
+describe('normalizePrivateKey', () => {
+  const oneLine = PRIVATE_KEY_PEM.trim().replace(/\n/g, '');
+
+  it('accepts a well-formed PEM unchanged', () => {
+    expect(createPrivateKey(normalizePrivateKey(PRIVATE_KEY_PEM))).toBeDefined();
+  });
+
+  it('repairs literal \\n escapes', () => {
+    const escaped = PRIVATE_KEY_PEM.replace(/\n/g, '\\n');
+    expect(createPrivateKey(normalizePrivateKey(escaped))).toBeDefined();
+  });
+
+  it('repairs CRLF line endings', () => {
+    const crlf = PRIVATE_KEY_PEM.replace(/\n/g, '\r\n');
+    expect(createPrivateKey(normalizePrivateKey(crlf))).toBeDefined();
+  });
+
+  it('rebuilds a PEM whose newlines were stripped entirely', () => {
+    // A single-line paste is what a plain <input> produces, and OpenSSL
+    // rejects it with an opaque "DECODER routines::unsupported".
+    expect(() => createPrivateKey(oneLine)).toThrow();
+    expect(createPrivateKey(normalizePrivateKey(oneLine))).toBeDefined();
   });
 });

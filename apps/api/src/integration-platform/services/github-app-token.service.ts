@@ -48,6 +48,43 @@ const isInstallationTokenResponse = (
   );
 };
 
+/**
+ * Coerce a pasted private key back into a PEM OpenSSL will accept.
+ *
+ * Keys reach us through env vars, JSON and web forms, any of which can turn the
+ * line breaks into literal `\n`, CRLF, or nothing at all. OpenSSL rejects all
+ * three with an opaque "DECODER routines::unsupported", so normalise here
+ * rather than making every operator debug it.
+ */
+export const normalizePrivateKey = (raw: string): string => {
+  const unescaped = raw
+    .trim()
+    .replace(/\\r\\n|\\n/g, '\n')
+    .replace(/\r\n?/g, '\n');
+
+  // Already has real line breaks in the body — nothing to rebuild.
+  if (unescaped.includes('\n')) return unescaped;
+
+  // Single-line paste: the base64 body must be re-wrapped at 64 columns, since
+  // PEM is only valid as a line-broken block.
+  const match = unescaped.match(
+    /^-----BEGIN ([A-Z0-9 ]+)-----\s*(.*?)\s*-----END \1-----$/,
+  );
+  if (!match) return unescaped;
+
+  const [, label, body] = match;
+  const wrapped = body.replace(/\s+/g, '').match(/.{1,64}/g)?.join('\n');
+  if (!wrapped) return unescaped;
+
+  return `-----BEGIN ${label}-----\n${wrapped}\n-----END ${label}-----\n`;
+};
+
+/** Shape of a key, safe to log — never includes key material. */
+const describeKey = (key: string): string => {
+  const firstLine = key.split('\n')[0]?.slice(0, 40) ?? '';
+  return `length=${key.length} lines=${key.split('\n').length} startsWith="${firstLine}"`;
+};
+
 const base64Url = (input: Buffer | string): string =>
   (typeof input === 'string' ? Buffer.from(input) : input)
     .toString('base64')
@@ -137,9 +174,7 @@ export class GithubAppTokenService {
       );
       return {
         appId,
-        // Keys pasted through env vars or JSON arrive with escaped newlines,
-        // which the crypto signer rejects with an opaque PEM error.
-        privateKey: privateKey.replace(/\\n/g, '\n'),
+        privateKey: normalizePrivateKey(privateKey),
         appSlug: this.readAppSlug(customSettings),
         source,
       };
@@ -235,7 +270,11 @@ export class GithubAppTokenService {
     try {
       appJwt = this.signAppJwt(credentials, config.appJwtExpirySeconds);
     } catch (error) {
-      this.logger.error(`Failed to sign GitHub App JWT: ${error}`);
+      // Log the key's shape, never its contents — this is almost always a
+      // malformed paste, and the raw OpenSSL error alone says nothing useful.
+      this.logger.error(
+        `Failed to sign GitHub App JWT (appId=${credentials.appId}, ${describeKey(credentials.privateKey)}): ${error}`,
+      );
       return null;
     }
 
