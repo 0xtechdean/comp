@@ -18,7 +18,11 @@ import {
 } from '@trycompai/design-system/icons';
 import { useState } from 'react';
 import useSWR from 'swr';
-import { IntegrationCard, type Integration } from './components/IntegrationCard';
+import {
+  IntegrationCard,
+  isConfigurableAuthType,
+  type Integration,
+} from './components/IntegrationCard';
 
 interface ApiIntegration extends Integration {
   encryptedClientId?: EncryptedData;
@@ -70,11 +74,14 @@ export default function AdminIntegrationsPage() {
     return terms.every((term) => searchText.includes(term));
   });
 
-  const oauthIntegrations = filteredIntegrations?.filter((i) => i.authType === 'oauth2') || [];
-  const otherIntegrations = filteredIntegrations?.filter((i) => i.authType !== 'oauth2') || [];
+  const oauthIntegrations =
+    filteredIntegrations?.filter((i) => isConfigurableAuthType(i.authType)) || [];
+  const otherIntegrations =
+    filteredIntegrations?.filter((i) => !isConfigurableAuthType(i.authType)) || [];
 
   const configuredCount = integrations?.filter((i) => i.hasCredentials).length || 0;
-  const oauthPendingCount = integrations?.filter((i) => i.authType === 'oauth2' && !i.hasCredentials).length || 0;
+  const oauthPendingCount =
+    integrations?.filter((i) => isConfigurableAuthType(i.authType) && !i.hasCredentials).length || 0;
 
   return (
     <PageLayout
