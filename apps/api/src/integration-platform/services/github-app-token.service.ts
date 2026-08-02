@@ -79,10 +79,19 @@ export const normalizePrivateKey = (raw: string): string => {
   return `-----BEGIN ${label}-----\n${wrapped}\n-----END ${label}-----\n`;
 };
 
-/** Shape of a key, safe to log — never includes key material. */
+/**
+ * Shape of a key, safe to log.
+ *
+ * Only ever echoes a PEM banner. Anything else is described but not quoted:
+ * when the wrong value is pasted into this field it is invariably a secret,
+ * and a short one would otherwise be reproduced in full by a prefix.
+ */
 const describeKey = (key: string): string => {
-  const firstLine = key.split('\n')[0]?.slice(0, 40) ?? '';
-  return `length=${key.length} lines=${key.split('\n').length} startsWith="${firstLine}"`;
+  const firstLine = key.split('\n')[0] ?? '';
+  const banner = firstLine.startsWith('-----BEGIN')
+    ? `header="${firstLine.slice(0, 40)}"`
+    : 'header=<not a PEM banner>';
+  return `length=${key.length} lines=${key.split('\n').length} ${banner}`;
 };
 
 const base64Url = (input: Buffer | string): string =>
