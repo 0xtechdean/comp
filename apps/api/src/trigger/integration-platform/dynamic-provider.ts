@@ -28,6 +28,11 @@ export async function isActiveDynamicProvider(slug: string): Promise<boolean> {
  *
  * - AWS → always on the server (its S3 calls must egress our VPC, not
  *   Trigger.dev's, whose endpoint policy blocks the cross-account read).
+ * - GitHub App → always on the server. Its bearer token is a short-lived
+ *   installation token minted by signing a JWT with the app's private key, and
+ *   both the key and the NestJS service that mints it live in the API process.
+ *   Delegating avoids duplicating that logic here and keeps the private key out
+ *   of the Trigger.dev runtime.
  * - Has a manifest here → static code integration → run in-process (unchanged).
  * - No manifest but an active dynamic integration → on the server (the manifest
  *   only exists in the API process).
@@ -43,6 +48,7 @@ export function shouldRunOnServer(params: {
 }): boolean {
   const { providerSlug, hasManifest, isActiveDynamic } = params;
   if (providerSlug === 'aws') return true;
+  if (providerSlug === 'github-app') return true;
   if (hasManifest) return false;
   return isActiveDynamic;
 }

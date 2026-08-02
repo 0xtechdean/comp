@@ -5,6 +5,8 @@ import { ConnectionRepository } from '../repositories/connection.repository';
 import { ProviderRepository } from '../repositories/provider.repository';
 import { CredentialVaultService } from './credential-vault.service';
 import { OAuthCredentialsService } from './oauth-credentials.service';
+import { ConnectionAuthResolverService } from './connection-auth-resolver.service';
+import { GithubAppTokenService } from './github-app-token.service';
 
 jest.mock('@db', () => ({ db: {} }));
 
@@ -56,6 +58,14 @@ describe('ConnectionCheckRunnerService', () => {
         {
           provide: OAuthCredentialsService,
           useValue: mockOAuthCredentialsService,
+        },
+        // The real resolver, wired to the same mocks: it now performs the
+        // credential logic that used to be inline in this service, so stubbing
+        // it out would stop exercising that behaviour.
+        ConnectionAuthResolverService,
+        {
+          provide: GithubAppTokenService,
+          useValue: { getInstallationToken: jest.fn(), invalidate: jest.fn() },
         },
       ],
     }).compile();

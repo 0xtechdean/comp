@@ -87,6 +87,17 @@ export class AdminIntegrationsController {
           additionalOAuthSettings:
             manifest.auth.config.additionalOAuthSettings || [],
         }),
+        // A GitHub App stores its app ID and PEM private key in the same two
+        // encrypted columns as an OAuth client ID/secret, so it reuses the same
+        // admin form — only the labels and the extra settings differ.
+        ...(manifest.auth.type === 'github_app' && {
+          setupInstructions: manifest.auth.config.setupInstructions,
+          createAppUrl: manifest.auth.config.createAppUrl,
+          clientIdLabel: 'App ID',
+          clientSecretLabel: 'Private key (PEM)',
+          clientSecretMultiline: true,
+          additionalOAuthSettings: manifest.auth.config.additionalSettings || [],
+        }),
       };
     });
   }
@@ -158,16 +169,21 @@ export class AdminIntegrationsController {
       );
     }
 
-    if (manifest.auth.type !== 'oauth2') {
+    // A GitHub App stores its app ID and PEM private key in the same two
+    // encrypted columns as an OAuth client ID/secret, so it saves through this
+    // endpoint too — only the labels differ in the UI.
+    if (manifest.auth.type !== 'oauth2' && manifest.auth.type !== 'github_app') {
       throw new HttpException(
-        `Provider ${providerSlug} does not use OAuth`,
+        `Provider ${providerSlug} does not support stored app credentials`,
         HttpStatus.BAD_REQUEST,
       );
     }
 
     if (!clientId || !clientSecret) {
       throw new HttpException(
-        'clientId and clientSecret are required',
+        manifest.auth.type === 'github_app'
+          ? 'App ID and private key are required'
+          : 'clientId and clientSecret are required',
         HttpStatus.BAD_REQUEST,
       );
     }

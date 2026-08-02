@@ -26,8 +26,13 @@ import { ConnectionRepository } from '../repositories/connection.repository';
 import { CredentialVaultService } from '../services/credential-vault.service';
 import { ConnectionService } from '../services/connection.service';
 import { OAuthCredentialsService } from '../services/oauth-credentials.service';
+import { GithubAppTokenService } from '../services/github-app-token.service';
 import { AutoCheckRunnerService } from '../services/auto-check-runner.service';
-import { getManifest, type OAuthConfig } from '@trycompai/integration-platform';
+import {
+  getManifest,
+  type IntegrationManifest,
+  type OAuthConfig,
+} from '@trycompai/integration-platform';
 
 interface StartOAuthDto {
   providerSlug: string;
@@ -55,6 +60,7 @@ export class OAuthController {
     private readonly connectionService: ConnectionService,
     private readonly oauthCredentialsService: OAuthCredentialsService,
     private readonly autoCheckRunnerService: AutoCheckRunnerService,
+    private readonly githubAppTokenService: GithubAppTokenService,
   ) {}
 
   /**
@@ -106,6 +112,21 @@ export class OAuthController {
         `Provider ${providerSlug} not found`,
         HttpStatus.NOT_FOUND,
       );
+    }
+
+    // A GitHub App is a different handshake (an installation, not a code
+    // exchange) but the same user-facing action: "connect this provider". The
+    // UI calls this one endpoint for every provider, so delegate rather than
+    // making every caller branch on auth type. The response shape is identical.
+    if (manifest.auth.type === 'github_app') {
+      const installationUrl = await this.startGitHubAppInstall({
+        providerSlug,
+        organizationId,
+        userId,
+        redirectUrl,
+        manifest,
+      });
+      return { authorizationUrl: installationUrl };
     }
 
     if (manifest.auth.type !== 'oauth2') {
@@ -449,6 +470,77 @@ export class OAuthController {
    * resolve the session manually (rather than via HybridAuthGuard) so we can
    * return a friendly redirect with `error=session_mismatch` instead of a 401.
    */
+  /**
+   * Create the install-flow state and return the GitHub App installation URL.
+   * Mirrors the OAuth start path: same state record, same redirect handling —
+   * only the destination and the callback that consumes it differ.
+   */
+  private async startGitHubAppInstall({
+    providerSlug,
+    organizationId,
+    userId,
+    redirectUrl,
+    manifest,
+  }: {
+    providerSlug: string;
+    organizationId: string;
+    userId: string;
+    redirectUrl?: string;
+    manifest: IntegrationManifest;
+  }): Promise<string> {
+    const credentials = await this.githubAppTokenService.getCredentials(
+      providerSlug,
+      organizationId,
+    );
+
+    if (!credentials?.appSlug) {
+      const config =
+        manifest.auth.type === 'github_app' ? manifest.auth.config : undefined;
+      throw new HttpException(
+        {
+          message: `No GitHub App is configured for ${providerSlug}`,
+          setupInstructions: config?.setupInstructions,
+          createAppUrl: config?.createAppUrl,
+        },
+        HttpStatus.PRECONDITION_FAILED,
+      );
+    }
+
+    await this.providerRepository.upsert({
+      slug: manifest.id,
+      name: manifest.name,
+      category: manifest.category,
+      capabilities: manifest.capabilities,
+      isActive: manifest.isActive,
+    });
+
+    const state = await this.oauthStateRepository.create({
+      providerSlug,
+      organizationId,
+      userId,
+      redirectUrl,
+    });
+
+    const installationUrl = await this.githubAppTokenService.getInstallUrl(
+      providerSlug,
+      organizationId,
+      state.state,
+    );
+
+    if (!installationUrl) {
+      throw new HttpException(
+        'Could not build the GitHub App installation URL',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    this.logger.log(
+      `Starting GitHub App install for ${providerSlug}, org: ${organizationId}`,
+    );
+
+    return installationUrl;
+  }
+
   private async checkSessionMatchesState(
     req: Request,
     oauthState: { userId: string; organizationId: string },

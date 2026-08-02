@@ -1,7 +1,16 @@
 'use client';
 
 import { api } from '@/lib/api-client';
-import { Badge, Button, Card, CardContent, Input, Label, Text } from '@trycompai/design-system';
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  Input,
+  Label,
+  Text,
+  Textarea,
+} from '@trycompai/design-system';
 import {
   CheckmarkFilled,
   Key,
@@ -47,7 +56,21 @@ export interface Integration {
   requiredScopes?: string[];
   authorizeUrl?: string;
   additionalOAuthSettings?: AdditionalOAuthSetting[];
+  clientIdLabel?: string;
+  clientSecretLabel?: string;
+  /** Render the secret as a textarea — a PEM private key spans many lines. */
+  clientSecretMultiline?: boolean;
 }
+
+/**
+ * Strategies whose credentials are configured here.
+ *
+ * A GitHub App is not OAuth, but its app ID and PEM private key live in the
+ * same two encrypted columns as an OAuth client ID/secret, so it reuses this
+ * form with different labels.
+ */
+export const isConfigurableAuthType = (authType: string): boolean =>
+  authType === 'oauth2' || authType === 'github_app';
 
 export function IntegrationCard({
   integration,
@@ -162,7 +185,7 @@ export function IntegrationCard({
           />
         )}
 
-        {integration.authType === 'oauth2' && (
+        {isConfigurableAuthType(integration.authType) && (
           <OAuthConfig
             integration={integration}
             showConfig={showConfig}
@@ -220,6 +243,11 @@ function OAuthConfig({
   handleSave: () => Promise<void>;
   handleDelete: () => Promise<void>;
 }) {
+  // A GitHub App reuses these two encrypted columns for its app ID and PEM
+  // private key, so the manifest can relabel them.
+  const idLabel = integration.clientIdLabel ?? 'Client ID';
+  const secretLabel = integration.clientSecretLabel ?? 'Client Secret';
+
   return (
     <>
       <div className="flex gap-2">
@@ -297,21 +325,32 @@ function OAuthConfig({
 
           <div className="grid gap-3">
             <div>
-              <Label>{integration.hasCredentials ? 'New Client ID' : 'Client ID'}</Label>
+              <Label>{integration.hasCredentials ? `New ${idLabel}` : idLabel}</Label>
               <Input
-                placeholder="Enter OAuth Client ID"
+                placeholder={`Enter ${idLabel}`}
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
               />
             </div>
             <div>
-              <Label>{integration.hasCredentials ? 'New Client Secret' : 'Client Secret'}</Label>
-              <Input
-                type="password"
-                placeholder="Enter OAuth Client Secret"
-                value={clientSecret}
-                onChange={(e) => setClientSecret(e.target.value)}
-              />
+              <Label>{integration.hasCredentials ? `New ${secretLabel}` : secretLabel}</Label>
+              {integration.clientSecretMultiline ? (
+                // A single-line input strips the newlines out of a pasted PEM,
+                // leaving a key the signer cannot parse.
+                <Textarea
+                  rows={6}
+                  placeholder={`Enter ${secretLabel}`}
+                  value={clientSecret}
+                  onChange={(e) => setClientSecret(e.target.value)}
+                />
+              ) : (
+                <Input
+                  type="password"
+                  placeholder={`Enter ${secretLabel}`}
+                  value={clientSecret}
+                  onChange={(e) => setClientSecret(e.target.value)}
+                />
+              )}
             </div>
 
             {additionalSettings.length > 0 && (

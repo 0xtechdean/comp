@@ -1,6 +1,7 @@
 'use client';
 
 import { ConnectIntegrationDialog } from '@/components/integrations/ConnectIntegrationDialog';
+import { usesRedirectConnectFlow } from '@/lib/integration-auth';
 import {
   useConnectionServices,
   useIntegrationConnections,
@@ -197,7 +198,7 @@ export function ProviderDetailView({
   }, [isCloudProvider, isConnected, selectedConnection, refreshServices, provider.id]);
 
   const handleConnect = useCallback(async () => {
-    if (provider.authType === 'oauth2') {
+    if (usesRedirectConnectFlow(provider.authType)) {
       const redirectUrl = `${window.location.origin}/${orgId}/integrations/${provider.id}?success=true&settings=true`;
       const result = await startOAuth(provider.id, redirectUrl);
       if (result?.authorizationUrl) {

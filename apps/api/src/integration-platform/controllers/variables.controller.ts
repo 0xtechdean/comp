@@ -27,6 +27,7 @@ import {
   type CheckVariable,
 } from '@trycompai/integration-platform';
 import { ConnectionRepository } from '../repositories/connection.repository';
+import { ConnectionAuthResolverService } from '../services/connection-auth-resolver.service';
 import { ConnectionService } from '../services/connection.service';
 import { ProviderRepository } from '../repositories/provider.repository';
 import { CredentialVaultService } from '../services/credential-vault.service';
@@ -89,6 +90,7 @@ export class VariablesController {
     private readonly credentialVaultService: CredentialVaultService,
     private readonly autoCheckRunnerService: AutoCheckRunnerService,
     private readonly connectionService: ConnectionService,
+    private readonly connectionAuthResolver: ConnectionAuthResolverService,
   ) {}
 
   /**
@@ -295,10 +297,17 @@ export class VariablesController {
     const credentials =
       await this.credentialVaultService.getDecryptedCredentials(connectionId);
 
-    const accessToken =
-      typeof credentials?.access_token === 'string'
-        ? credentials.access_token
-        : undefined;
+    // Resolve through the shared resolver rather than reading `access_token`
+    // directly: a GitHub App connection stores an installation ID, and its
+    // bearer token is minted on demand.
+    const { accessToken } = await this.connectionAuthResolver.resolve({
+      manifest,
+      providerSlug: provider.slug,
+      organizationId: connection.organizationId,
+      connectionId,
+      credentials: credentials ?? {},
+    });
+
     if (!accessToken) {
       throw new HttpException(
         'No valid credentials found',

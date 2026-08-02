@@ -8,6 +8,7 @@ import {
   useIntegrationProviders,
 } from '@/hooks/use-integration-platform';
 import { api } from '@/lib/api-client';
+import { usesRedirectConnectFlow } from '@/lib/integration-auth';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useVendors } from '@/hooks/use-vendors';
 import { Badge } from '@trycompai/ui/badge';
@@ -140,8 +141,8 @@ export function PlatformIntegrations({ className, taskTemplates }: PlatformInteg
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
 
   const handleConnect = async (provider: IntegrationProvider) => {
-    // For OAuth, redirect to authorization URL
-    if (provider.authType === 'oauth2') {
+    // OAuth and GitHub App both redirect out and return via an API callback.
+    if (usesRedirectConnectFlow(provider.authType)) {
       setConnectingProvider(provider.id);
       try {
         const redirectUrl = `${window.location.origin}/${orgId}/integrations/${provider.id}?success=true`;
