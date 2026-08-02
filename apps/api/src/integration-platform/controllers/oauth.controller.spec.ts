@@ -12,6 +12,7 @@ import { CredentialVaultService } from '../services/credential-vault.service';
 import { ConnectionService } from '../services/connection.service';
 import { OAuthCredentialsService } from '../services/oauth-credentials.service';
 import { AutoCheckRunnerService } from '../services/auto-check-runner.service';
+import { GithubAppTokenService } from '../services/github-app-token.service';
 import { CloudSecurityService } from '../../cloud-security/cloud-security.service';
 
 jest.mock('@db', () => ({
@@ -134,6 +135,14 @@ describe('OAuthController', () => {
         {
           provide: CloudSecurityService,
           useValue: mockCloudSecurityService,
+        },
+        {
+          provide: GithubAppTokenService,
+          useValue: {
+            getCredentials: jest.fn(),
+            getInstallUrl: jest.fn(),
+            invalidate: jest.fn(),
+          },
         },
       ],
     })

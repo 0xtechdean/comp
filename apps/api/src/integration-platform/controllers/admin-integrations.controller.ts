@@ -87,6 +87,17 @@ export class AdminIntegrationsController {
           additionalOAuthSettings:
             manifest.auth.config.additionalOAuthSettings || [],
         }),
+        // A GitHub App stores its app ID and PEM private key in the same two
+        // encrypted columns as an OAuth client ID/secret, so it reuses the same
+        // admin form — only the labels and the extra settings differ.
+        ...(manifest.auth.type === 'github_app' && {
+          setupInstructions: manifest.auth.config.setupInstructions,
+          createAppUrl: manifest.auth.config.createAppUrl,
+          clientIdLabel: 'App ID',
+          clientSecretLabel: 'Private key (PEM)',
+          clientSecretMultiline: true,
+          additionalOAuthSettings: manifest.auth.config.additionalSettings || [],
+        }),
       };
     });
   }

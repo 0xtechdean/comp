@@ -12,6 +12,7 @@ import { awsManifest } from '../manifests/aws';
 import { azureManifest } from '../manifests/azure';
 import { gcpManifest } from '../manifests/gcp';
 import { manifest as githubManifest } from '../manifests/github';
+import { manifest as githubAppManifest } from '../manifests/github-app';
 import { googleWorkspaceManifest } from '../manifests/google-workspace';
 import { railwayManifest } from '../manifests/railway';
 import { ripplingManifest } from '../manifests/rippling';
@@ -57,6 +58,15 @@ class IntegrationRegistryImpl implements IntegrationRegistry {
       const config = manifest.auth.config;
       if (!config.authorizeUrl || !config.tokenUrl) {
         throw new Error(`Integration ${manifest.id}: OAuth2 requires authorizeUrl and tokenUrl`);
+      }
+    }
+
+    if (manifest.auth.type === 'github_app') {
+      const config = manifest.auth.config;
+      if (!config.installUrl || !config.installationTokenUrl) {
+        throw new Error(
+          `Integration ${manifest.id}: GitHub App requires installUrl and installationTokenUrl`,
+        );
       }
     }
 
@@ -142,6 +152,7 @@ const allManifests: IntegrationManifest[] = [
   azureManifest,
   gcpManifest,
   githubManifest,
+  githubAppManifest,
   googleWorkspaceManifest,
   ripplingManifest,
   vercelManifest,

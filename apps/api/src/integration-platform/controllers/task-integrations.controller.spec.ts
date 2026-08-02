@@ -8,6 +8,8 @@ import { CheckRunRepository } from '../repositories/check-run.repository';
 import { CredentialVaultService } from '../services/credential-vault.service';
 import { OAuthCredentialsService } from '../services/oauth-credentials.service';
 import { TaskIntegrationChecksService } from '../services/task-integration-checks.service';
+import { ConnectionAuthResolverService } from '../services/connection-auth-resolver.service';
+import { GithubAppTokenService } from '../services/github-app-token.service';
 
 jest.mock('../../auth/auth.server', () => ({
   auth: { api: { getSession: jest.fn() } },
@@ -242,6 +244,13 @@ describe('TaskIntegrationsController', () => {
         {
           provide: TaskIntegrationChecksService,
           useValue: mockTaskIntegrationChecksService,
+        },
+        // The real resolver, wired to the same mocks: it now performs the
+        // credential logic that used to be inline in this controller.
+        ConnectionAuthResolverService,
+        {
+          provide: GithubAppTokenService,
+          useValue: { getInstallationToken: jest.fn(), invalidate: jest.fn() },
         },
       ],
     })

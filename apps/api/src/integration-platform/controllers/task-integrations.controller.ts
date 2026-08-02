@@ -35,6 +35,7 @@ import { CredentialVaultService } from '../services/credential-vault.service';
 import { OAuthCredentialsService } from '../services/oauth-credentials.service';
 import { TaskIntegrationChecksService } from '../services/task-integration-checks.service';
 import { getStringValue } from '../utils/credential-utils';
+import { ConnectionAuthResolverService } from '../services/connection-auth-resolver.service';
 import { isCheckDisabledForTask } from '../utils/disabled-task-checks';
 import { getProviderSummary } from '../utils/provider-summary';
 import { getConnectionLabel } from '../utils/connection-label';
@@ -89,7 +90,7 @@ interface TaskIntegrationCheck {
   lastRunFindings?: number;
   lastRunPassing?: number;
   /** For OAuth providers: whether platform/org admin has configured credentials */
-  authType: 'oauth2' | 'custom' | 'api_key' | 'basic' | 'jwt';
+  authType: 'oauth2' | 'github_app' | 'custom' | 'api_key' | 'basic' | 'jwt';
   oauthConfigured?: boolean;
 }
 
@@ -163,6 +164,7 @@ export class TaskIntegrationsController {
     private readonly credentialVaultService: CredentialVaultService,
     private readonly oauthCredentialsService: OAuthCredentialsService,
     private readonly taskIntegrationChecksService: TaskIntegrationChecksService,
+    private readonly connectionAuthResolver: ConnectionAuthResolverService,
   ) {}
 
   /**
@@ -574,33 +576,15 @@ export class TaskIntegrationsController {
           string | number | boolean | string[] | undefined
         >) || {};
 
-      // Build token refresh callback for OAuth integrations that support it.
-      let onTokenRefresh: (() => Promise<string | null>) | undefined;
-      if (manifest.auth.type === 'oauth2') {
-        const oauthConfig = manifest.auth.config;
-        const supportsRefresh = oauthConfig.supportsRefreshToken !== false;
-        if (supportsRefresh) {
-          const oauthCredentials =
-            await this.oauthCredentialsService.getCredentials(
-              manifest.id,
-              organizationId,
-            );
-          if (oauthCredentials) {
-            onTokenRefresh = async () =>
-              this.credentialVaultService.refreshOAuthTokens(connectionId, {
-                tokenUrl: oauthConfig.tokenUrl,
-                refreshUrl: oauthConfig.refreshUrl,
-                clientId: oauthCredentials.clientId,
-                clientSecret: oauthCredentials.clientSecret,
-                clientAuthMethod: oauthConfig.clientAuthMethod,
-                scope: oauthCredentials.scopes.join(' '),
-                tokenParams: oauthConfig.tokenParams,
-              });
-          }
-        }
-      }
+      const { accessToken, onTokenRefresh } =
+        await this.connectionAuthResolver.resolve({
+          manifest,
+          providerSlug: manifest.id,
+          organizationId,
+          connectionId,
+          credentials,
+        });
 
-      const accessToken = getStringValue(credentials.access_token);
       const result = await runAllChecks({
         manifest,
         accessToken,

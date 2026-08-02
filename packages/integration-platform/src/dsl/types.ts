@@ -357,7 +357,7 @@ export const DynamicIntegrationDefinitionSchema = z.object({
   baseUrl: z.string().url().optional(),
   defaultHeaders: z.record(z.string(), z.string()).optional(),
   authConfig: z.object({
-    type: z.enum(['oauth2', 'api_key', 'basic', 'jwt', 'custom']),
+    type: z.enum(['oauth2', 'github_app', 'api_key', 'basic', 'jwt', 'custom']),
     config: z.record(z.string(), z.unknown()),
   }),
   capabilities: z

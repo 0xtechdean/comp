@@ -39,6 +39,30 @@ export const targetReposVariable: CheckVariable = {
       });
     };
 
+    // A GitHub App installation exposes exactly the repositories the org granted
+    // it, private ones included, with no dependence on the connecting user's own
+    // access. An OAuth user token has no installation and 403s here, falling
+    // through to the user-scoped lookup below.
+    try {
+      const perPage = 100;
+      for (let page = 1; page <= 20; page++) {
+        const response = await ctx.fetch<{ repositories?: GitHubRepo[] }>(
+          `/installation/repositories?per_page=${perPage}&page=${page}`,
+        );
+        const repos = response?.repositories ?? [];
+        for (const repo of repos) {
+          addRepo(repo);
+        }
+        if (repos.length < perPage) break;
+      }
+    } catch {
+      // Not an installation token — fall through to the user-scoped lookup.
+    }
+
+    if (allRepos.size > 0) {
+      return Array.from(allRepos.values()).sort((a, b) => a.label.localeCompare(b.label));
+    }
+
     try {
       const allAccessibleRepos = await ctx.fetchAllPages<GitHubRepo>(
         '/user/repos?affiliation=owner,collaborator,organization_member&visibility=all',

@@ -6,7 +6,13 @@ import type { TaskTemplateId } from './task-mappings';
 // Auth Strategy Types
 // ============================================================================
 
-export type AuthStrategyType = 'oauth2' | 'api_key' | 'basic' | 'jwt' | 'custom';
+export type AuthStrategyType =
+  | 'oauth2'
+  | 'github_app'
+  | 'api_key'
+  | 'basic'
+  | 'jwt'
+  | 'custom';
 
 export const OAuthConfigSchema = z.object({
   authorizeUrl: z.string(),
@@ -92,6 +98,65 @@ export const OAuthConfigSchema = z.object({
 
 export type OAuthConfig = z.infer<typeof OAuthConfigSchema>;
 
+/**
+ * GitHub App authentication.
+ *
+ * Unlike OAuth, the credential is owned by the installing organization rather
+ * than by the user who happened to click Authorize. That matters for compliance
+ * checks: an OAuth grant dies when its authorizing user leaves or revokes it,
+ * and it can only ever see what that one user can see. An installation is
+ * granted repositories explicitly, so private repos stay visible without
+ * requiring the connector to be an org owner.
+ *
+ * The stored credential is an app ID plus a private key. Short-lived
+ * installation access tokens are minted from those on demand.
+ */
+export const GitHubAppConfigSchema = z.object({
+  /** REST API base. Override for GitHub Enterprise Server. */
+  apiBaseUrl: z.string().url().default('https://api.github.com'),
+  /** Where the app is installed. `{APP_SLUG}` is substituted at connect time. */
+  installUrl: z
+    .string()
+    .default('https://github.com/apps/{APP_SLUG}/installations/new'),
+  /** Endpoint that exchanges an app JWT for an installation token. */
+  installationTokenUrl: z
+    .string()
+    .default('https://api.github.com/app/installations/{INSTALLATION_ID}/access_tokens'),
+  /**
+   * Installation tokens last one hour. Re-mint this many seconds before expiry
+   * so a long check run cannot straddle the boundary and 401 mid-flight.
+   */
+  tokenRefreshLeewaySeconds: z.number().default(300),
+  /** Lifetime of the signed app JWT. GitHub rejects anything above 600s. */
+  appJwtExpirySeconds: z.number().max(600).default(540),
+  /** Repository permissions the app requires, surfaced in setup docs. */
+  repositoryPermissions: z.record(z.string(), z.enum(['read', 'write'])).optional(),
+  /** Organization permissions the app requires, surfaced in setup docs. */
+  organizationPermissions: z.record(z.string(), z.enum(['read', 'write'])).optional(),
+  setupInstructions: z.string().optional(),
+  createAppUrl: z.string().url().optional(),
+  /**
+   * Extra fields an admin supplies alongside the app ID and private key.
+   * Same shape as `additionalOAuthSettings` so the credential admin UI can
+   * render both strategies with one generic form.
+   */
+  additionalSettings: z
+    .array(
+      z.object({
+        id: z.string(),
+        label: z.string(),
+        type: z.enum(['text', 'password', 'textarea', 'select', 'combobox']),
+        placeholder: z.string().optional(),
+        helpText: z.string().optional(),
+        required: z.boolean().default(false),
+        options: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+      }),
+    )
+    .optional(),
+});
+
+export type GitHubAppConfig = z.infer<typeof GitHubAppConfigSchema>;
+
 export const ApiKeyConfigSchema = z.object({
   /** Where to send the API key */
   in: z.enum(['header', 'query']),
@@ -163,6 +228,7 @@ export type CustomAuthConfig = z.infer<typeof CustomAuthConfigSchema>;
 
 export type AuthStrategy =
   | { type: 'oauth2'; config: OAuthConfig }
+  | { type: 'github_app'; config: GitHubAppConfig }
   | { type: 'api_key'; config: ApiKeyConfig }
   | { type: 'basic'; config: BasicAuthConfig }
   | { type: 'jwt'; config: JwtConfig }

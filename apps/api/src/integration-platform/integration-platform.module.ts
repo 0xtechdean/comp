@@ -24,6 +24,10 @@ import { OAuthTokenRevocationService } from './services/oauth-token-revocation.s
 import { DynamicManifestLoaderService } from './services/dynamic-manifest-loader.service';
 import { TaskIntegrationChecksService } from './services/task-integration-checks.service';
 import { ConnectionCheckRunnerService } from './services/connection-check-runner.service';
+import { ConnectionAuthResolverService } from './services/connection-auth-resolver.service';
+import { GithubAppTokenService } from './services/github-app-token.service';
+import { OAuthCallbackSupportService } from './services/oauth-callback-support.service';
+import { GitHubAppController } from './controllers/github-app.controller';
 import { InternalIntegrationDebugService } from './services/internal-integration-debug.service';
 import { ProviderRepository } from './repositories/provider.repository';
 import { ConnectionRepository } from './repositories/connection.repository';
@@ -55,6 +59,7 @@ import { GenericDeviceSyncService } from './services/generic-device-sync.service
     WebhookController,
     SyncController,
     ServicesController,
+    GitHubAppController,
   ],
   providers: [
     // Services
@@ -67,6 +72,9 @@ import { GenericDeviceSyncService } from './services/generic-device-sync.service
     DynamicManifestLoaderService,
     TaskIntegrationChecksService,
     ConnectionCheckRunnerService,
+    ConnectionAuthResolverService,
+    GithubAppTokenService,
+    OAuthCallbackSupportService,
     InternalIntegrationDebugService,
     IntegrationSyncLoggerService,
     GenericEmployeeSyncService,
@@ -88,6 +96,8 @@ import { GenericDeviceSyncService } from './services/generic-device-sync.service
     OAuthCredentialsService,
     AutoCheckRunnerService,
     DynamicManifestLoaderService,
+    ConnectionAuthResolverService,
+    GithubAppTokenService,
   ],
 })
 export class IntegrationPlatformModule {}

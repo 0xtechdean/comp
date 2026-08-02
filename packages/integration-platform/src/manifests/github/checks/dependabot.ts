@@ -67,24 +67,48 @@ export const dependabotCheck: IntegrationCheck = {
         }
       }
     } else {
-      const orgs = await ctx.fetch<GitHubOrg[]>('/user/orgs');
       repos = [];
-      for (const org of orgs) {
-        try {
-          const orgRepos = await ctx.fetchAllPages<GitHubRepo>(`/orgs/${org.login}/repos`);
-          repos.push(...orgRepos);
-        } catch (error) {
-          const errorStr = String(error);
-          // Skip orgs with SAML SSO that haven't been authorized, or permission errors
-          if (
-            errorStr.includes('403') ||
-            errorStr.includes('SAML') ||
-            errorStr.includes('Forbidden')
-          ) {
-            ctx.log(`Skipping organization ${org.login} (SAML SSO or permission denied)`);
-            continue;
+
+      // Installation tokens have no user context, so `/user/orgs` 403s under a
+      // GitHub App. Ask for the installation's repositories first and only fall
+      // back to the user-scoped discovery when this is an OAuth connection.
+      let discoveredViaInstallation = false;
+      try {
+        const perPage = 100;
+        for (let page = 1; page <= 20; page++) {
+          const response = await ctx.fetch<{ repositories?: GitHubRepo[] }>(
+            `/installation/repositories?per_page=${perPage}&page=${page}`,
+          );
+          const installationRepos = response?.repositories ?? [];
+          repos.push(...installationRepos);
+          discoveredViaInstallation = true;
+          if (installationRepos.length < perPage) break;
+        }
+      } catch {
+        repos = [];
+      }
+
+      if (discoveredViaInstallation) {
+        ctx.log(`Discovered ${repos.length} repositories from the App installation`);
+      } else {
+        const orgs = await ctx.fetch<GitHubOrg[]>('/user/orgs');
+        for (const org of orgs) {
+          try {
+            const orgRepos = await ctx.fetchAllPages<GitHubRepo>(`/orgs/${org.login}/repos`);
+            repos.push(...orgRepos);
+          } catch (error) {
+            const errorStr = String(error);
+            // Skip orgs with SAML SSO that haven't been authorized, or permission errors
+            if (
+              errorStr.includes('403') ||
+              errorStr.includes('SAML') ||
+              errorStr.includes('Forbidden')
+            ) {
+              ctx.log(`Skipping organization ${org.login} (SAML SSO or permission denied)`);
+              continue;
+            }
+            throw error;
           }
-          throw error;
         }
       }
     }

@@ -16,6 +16,15 @@ describe('shouldRunOnServer', () => {
     ).toBe(true);
   });
 
+  it('always delegates GitHub App, whose private key lives only in the API process', () => {
+    // It has a static manifest, so without the explicit rule the `hasManifest`
+    // branch below would run it in-process, where no installation token can be
+    // minted and every check would 401.
+    expect(
+      shouldRunOnServer({ providerSlug: 'github-app', hasManifest: true, isActiveDynamic: false }),
+    ).toBe(true);
+  });
+
   it('runs static providers (manifest present) in-process', () => {
     expect(
       shouldRunOnServer({ providerSlug: 'github', hasManifest: true, isActiveDynamic: false }),

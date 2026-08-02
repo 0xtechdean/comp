@@ -188,8 +188,13 @@ export function createCheckContext(options: CheckContextOptions): {
       ...extra,
     };
 
-    // OAuth: Add Bearer token
-    if (manifest.auth.type === 'oauth2' && currentAccessToken) {
+    // OAuth and GitHub App both present as bearer tokens. For GitHub App the
+    // token is a short-lived installation token minted by the caller; expiry is
+    // handled by the shared 401 -> onTokenRefresh path in executeRequest.
+    if (
+      (manifest.auth.type === 'oauth2' || manifest.auth.type === 'github_app') &&
+      currentAccessToken
+    ) {
       headers['Authorization'] = `Bearer ${currentAccessToken}`;
     }
 

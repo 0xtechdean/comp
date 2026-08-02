@@ -11,6 +11,7 @@ import {
 } from '@trycompai/integration-platform';
 import { ConnectionRepository } from '../repositories/connection.repository';
 import { ProviderRepository } from '../repositories/provider.repository';
+import { ConnectionAuthResolverService } from './connection-auth-resolver.service';
 import { CredentialVaultService } from './credential-vault.service';
 import { OAuthCredentialsService } from './oauth-credentials.service';
 import { getStringValue } from '../utils/credential-utils';
@@ -41,6 +42,7 @@ export class ConnectionCheckRunnerService {
     private readonly providerRepository: ProviderRepository,
     private readonly credentialVaultService: CredentialVaultService,
     private readonly oauthCredentialsService: OAuthCredentialsService,
+    private readonly connectionAuthResolver: ConnectionAuthResolverService,
   ) {}
 
   /**
@@ -236,42 +238,18 @@ export class ConnectionCheckRunnerService {
         string | number | boolean | string[] | undefined
       >) || {};
 
-    // Build the OAuth refresh callback for providers that support it. AWS is
-    // not oauth2, so this is a no-op for the AWS path that actually uses this.
-    let accessToken = getStringValue(credentials.access_token);
-    let onTokenRefresh: (() => Promise<string | null>) | undefined;
-    if (manifest.auth.type === 'oauth2') {
-      const oauthConfig = manifest.auth.config;
-      if (oauthConfig.supportsRefreshToken !== false) {
-        const oauthCredentials =
-          await this.oauthCredentialsService.getCredentials(
-            provider.slug,
-            organizationId,
-          );
-        if (oauthCredentials) {
-          const refreshConfig = {
-            tokenUrl: oauthConfig.tokenUrl,
-            refreshUrl: oauthConfig.refreshUrl,
-            clientId: oauthCredentials.clientId,
-            clientSecret: oauthCredentials.clientSecret,
-            clientAuthMethod: oauthConfig.clientAuthMethod,
-            scope: oauthCredentials.scopes.join(' '),
-            tokenParams: oauthConfig.tokenParams,
-          };
-          const validAccessToken =
-            await this.credentialVaultService.getValidAccessToken(
-              connectionId,
-              refreshConfig,
-            );
-          if (validAccessToken) accessToken = validAccessToken;
-          onTokenRefresh = () =>
-            this.credentialVaultService.refreshOAuthTokens(
-              connectionId,
-              refreshConfig,
-            );
-        }
-      }
-    }
+    // Strategy-specific credential resolution (OAuth refresh, GitHub App
+    // installation tokens) lives in the resolver so every entry point that runs
+    // checks behaves identically. AWS and other non-token strategies fall
+    // through to the raw stored credential.
+    const { accessToken, onTokenRefresh } =
+      await this.connectionAuthResolver.resolve({
+        manifest,
+        providerSlug: provider.slug,
+        organizationId,
+        connectionId,
+        credentials,
+      });
 
     return { credentials, variables, accessToken, onTokenRefresh };
   }

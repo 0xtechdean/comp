@@ -34,6 +34,7 @@ import { OAuthCredentialsService } from '../services/oauth-credentials.service';
 import { ProviderRepository } from '../repositories/provider.repository';
 import { CheckRunRepository } from '../repositories/check-run.repository';
 import { getStringValue } from '../utils/credential-utils';
+import { ConnectionAuthResolverService } from '../services/connection-auth-resolver.service';
 
 // Class (not interface) so @nestjs/swagger emits a body schema, plus a
 // class-validator decorator so the ValidationPipe whitelist accepts the field.
@@ -71,6 +72,7 @@ export class ChecksController {
     private readonly oauthCredentialsService: OAuthCredentialsService,
     private readonly checkRunRepository: CheckRunRepository,
     private readonly connectionService: ConnectionService,
+    private readonly connectionAuthResolver: ConnectionAuthResolverService,
   ) {}
 
   /**
@@ -249,47 +251,14 @@ export class ChecksController {
       `Running checks for connection ${connectionId} (${provider.slug})${body.checkId ? ` - check: ${body.checkId}` : ''}`,
     );
 
-    let accessToken = getStringValue(credentials.access_token);
-    let onTokenRefresh: (() => Promise<string | null>) | undefined;
-    if (manifest.auth.type === 'oauth2') {
-      const oauthConfig = manifest.auth.config;
-      const supportsRefresh = oauthConfig.supportsRefreshToken !== false;
-
-      if (supportsRefresh) {
-        const oauthCredentials =
-          await this.oauthCredentialsService.getCredentials(
-            provider.slug,
-            organizationId,
-          );
-
-        if (oauthCredentials) {
-          const refreshConfig = {
-            tokenUrl: oauthConfig.tokenUrl,
-            refreshUrl: oauthConfig.refreshUrl,
-            clientId: oauthCredentials.clientId,
-            clientSecret: oauthCredentials.clientSecret,
-            clientAuthMethod: oauthConfig.clientAuthMethod,
-            scope: oauthCredentials.scopes.join(' '),
-            tokenParams: oauthConfig.tokenParams,
-          };
-
-          const validAccessToken =
-            await this.credentialVaultService.getValidAccessToken(
-              connectionId,
-              refreshConfig,
-            );
-          if (validAccessToken) {
-            accessToken = validAccessToken;
-          }
-
-          onTokenRefresh = () =>
-            this.credentialVaultService.refreshOAuthTokens(
-              connectionId,
-              refreshConfig,
-            );
-        }
-      }
-    }
+    const { accessToken, onTokenRefresh } =
+      await this.connectionAuthResolver.resolve({
+        manifest,
+        providerSlug: provider.slug,
+        organizationId,
+        connectionId,
+        credentials,
+      });
 
     // Create a check run record
     const checkRun = await this.checkRunRepository.create({

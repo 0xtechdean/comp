@@ -5,6 +5,7 @@ import { Badge } from '@trycompai/ui/badge';
 import { Card, CardContent } from '@trycompai/ui/card';
 import { Input } from '@trycompai/ui/input';
 import { Label } from '@trycompai/ui/label';
+import { Textarea } from '@trycompai/ui/textarea';
 import { Button } from '@trycompai/design-system';
 import {
   CheckmarkFilled,
@@ -56,7 +57,23 @@ interface Integration {
   requiredScopes?: string[];
   authorizeUrl?: string;
   additionalOAuthSettings?: AdditionalOAuthSetting[];
+  clientIdLabel?: string;
+  clientSecretLabel?: string;
+  /** Render the secret as a textarea — a PEM private key spans many lines. */
+  clientSecretMultiline?: boolean;
 }
+
+/**
+ * Strategies whose credentials are configured through this page.
+ *
+ * A GitHub App is not OAuth, but its app ID and PEM private key are stored in
+ * the same two encrypted columns as an OAuth client ID/secret, so it uses the
+ * same form with different labels.
+ */
+const CONFIGURABLE_AUTH_TYPES = ['oauth2', 'github_app'];
+
+const isConfigurable = (authType: string): boolean =>
+  CONFIGURABLE_AUTH_TYPES.includes(authType);
 
 function IntegrationCard({
   integration,
@@ -95,6 +112,10 @@ function IntegrationCard({
   }, [integration.encryptedClientId, integration.encryptedClientSecret, decryptedClientId]);
 
   const additionalSettings = integration.additionalOAuthSettings || [];
+  // A GitHub App reuses these two encrypted columns for its app ID and PEM
+  // private key, so the manifest can relabel them.
+  const idLabel = integration.clientIdLabel ?? 'Client ID';
+  const secretLabel = integration.clientSecretLabel ?? 'Client Secret';
 
   const handleSave = async () => {
     if (!clientId || !clientSecret) return;
@@ -192,7 +213,7 @@ function IntegrationCard({
             )}
           </div>
 
-          {integration.authType === 'oauth2' && (
+          {isConfigurable(integration.authType) && (
             <>
               <div className="flex gap-2">
                 <Button
@@ -323,26 +344,38 @@ function IntegrationCard({
                   <div className="grid gap-3">
                     <div>
                       <Label className="text-sm">
-                        {integration.hasCredentials ? 'New Client ID' : 'Client ID'}
+                        {integration.hasCredentials ? `New ${idLabel}` : idLabel}
                       </Label>
                       <Input
                         className="font-mono text-sm"
-                        placeholder={decryptedClientId || 'Enter OAuth Client ID'}
+                        placeholder={decryptedClientId || `Enter ${idLabel}`}
                         value={clientId}
                         onChange={(e) => setClientId(e.target.value)}
                       />
                     </div>
                     <div>
                       <Label className="text-sm">
-                        {integration.hasCredentials ? 'New Client Secret' : 'Client Secret'}
+                        {integration.hasCredentials ? `New ${secretLabel}` : secretLabel}
                       </Label>
-                      <Input
-                        type="password"
-                        className="font-mono text-sm"
-                        placeholder="Enter OAuth Client Secret"
-                        value={clientSecret}
-                        onChange={(e) => setClientSecret(e.target.value)}
-                      />
+                      {integration.clientSecretMultiline ? (
+                        // A single-line input strips the newlines out of a
+                        // pasted PEM, leaving a key the signer cannot parse.
+                        <Textarea
+                          rows={6}
+                          className="font-mono text-xs"
+                          placeholder={`Enter ${secretLabel}`}
+                          value={clientSecret}
+                          onChange={(e) => setClientSecret(e.target.value)}
+                        />
+                      ) : (
+                        <Input
+                          type="password"
+                          className="font-mono text-sm"
+                          placeholder={`Enter ${secretLabel}`}
+                          value={clientSecret}
+                          onChange={(e) => setClientSecret(e.target.value)}
+                        />
+                      )}
                     </div>
 
                     {/* Additional OAuth Settings - provider-specific OAuth configuration */}
@@ -428,8 +461,10 @@ export default function AdminIntegrationsPage() {
     );
   });
 
-  const oauthIntegrations = filteredIntegrations?.filter((i) => i.authType === 'oauth2') || [];
-  const otherIntegrations = filteredIntegrations?.filter((i) => i.authType !== 'oauth2') || [];
+  const oauthIntegrations =
+    filteredIntegrations?.filter((i) => isConfigurable(i.authType)) || [];
+  const otherIntegrations =
+    filteredIntegrations?.filter((i) => !isConfigurable(i.authType)) || [];
 
   const configuredCount = integrations?.filter((i) => i.hasCredentials).length || 0;
   const totalOAuth = oauthIntegrations.length;

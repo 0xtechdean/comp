@@ -25,6 +25,7 @@ export type {
   // Finding types
   FindingSeverity,
   FindingStatus,
+  GitHubAppConfig,
   // Capability types
   IntegrationCapability,
   // Category type
@@ -55,6 +56,7 @@ export {
   BasicAuthConfigSchema,
   CredentialFieldSchema,
   CustomAuthConfigSchema,
+  GitHubAppConfigSchema,
   JwtConfigSchema,
   OAuthConfigSchema,
   WebhookConfigSchema,
@@ -131,6 +133,7 @@ export type {
 
 // Individual manifests (for direct import if needed)
 export { manifest as githubManifest } from './manifests/github';
+export { manifest as githubAppManifest } from './manifests/github-app';
 
 // Directory sync email include/exclude terms (Google Workspace, JumpCloud, checks)
 export { matchesSyncFilterTerms, parseSyncFilterTerms } from './sync-filter/email-exclusion-terms';

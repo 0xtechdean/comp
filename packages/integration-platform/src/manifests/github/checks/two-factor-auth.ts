@@ -37,6 +37,11 @@ const isOwnerPermissionError = (error: unknown, errorMsg: string): boolean => {
   // GitHub documents 422 when 2fa_* filters are used in unsupported contexts.
   if (status === 422) return true;
 
+  // A GitHub App installation is never an org "owner", so the filter comes back
+  // as a flat 403 rather than a 422. SAML and rate-limit 403s are matched by
+  // their own predicates before this one runs.
+  if (status === 403) return true;
+
   if (lower.includes('must be an organization owner') || lower.includes('organization owners')) {
     return true;
   }
@@ -71,6 +76,30 @@ const isRateLimitError = (error: unknown, errorMsg: string): boolean => {
 
 const formatUsernames = (members: GitHubOrgMember[]): string =>
   members.map((member) => `@${member.login}`).join(', ');
+
+interface GitHubOrgSettings {
+  two_factor_requirement_enabled?: boolean | null;
+}
+
+/**
+ * Read the org-wide 2FA enforcement flag.
+ *
+ * Returns null when the flag is not visible to the current credential, which is
+ * the signal to fall back to reporting a permission problem rather than
+ * inventing a pass or a fail.
+ */
+const readTwoFactorRequirement = async (
+  ctx: { fetch: <T>(path: string) => Promise<T> },
+  orgSlug: string,
+): Promise<boolean | null> => {
+  try {
+    const org = await ctx.fetch<GitHubOrgSettings>(`/orgs/${orgSlug}`);
+    const enforced = org?.two_factor_requirement_enabled;
+    return typeof enforced === 'boolean' ? enforced : null;
+  } catch {
+    return null;
+  }
+};
 
 export const twoFactorAuthCheck: IntegrationCheck = {
   id: 'two_factor_auth',
@@ -161,6 +190,47 @@ export const twoFactorAuthCheck: IntegrationCheck = {
         // Surface as a finding so they know to either reconnect with an owner
         // account or remove the repo from the selection.
         if (isOwnerPermissionError(error, errorMsg)) {
+          // The member-level filter is owner-only, but the org's enforcement
+          // flag is readable with organization admin scope — including by a
+          // GitHub App installation, which is never an "owner". Org-wide
+          // enforcement is a strictly stronger control than "no member
+          // currently lacks 2FA", so honour it when it is visible.
+          const enforced = await readTwoFactorRequirement(ctx, orgSlug);
+
+          if (enforced === true) {
+            ctx.pass({
+              title: `2FA is enforced for all members in ${orgLogin}`,
+              description: `The ${orgLogin} organization requires two-factor authentication for every member, so no member can be without 2FA.`,
+              resourceType: 'organization',
+              resourceId: orgLogin,
+              evidence: {
+                organization: orgLogin,
+                twoFactorRequirementEnabled: true,
+                source: 'organization-settings',
+                checkedAt,
+              },
+            });
+            continue;
+          }
+
+          if (enforced === false) {
+            ctx.fail({
+              title: `2FA is not enforced in ${orgLogin}`,
+              description: `The ${orgLogin} organization does not require two-factor authentication for its members.`,
+              resourceType: 'organization',
+              resourceId: orgLogin,
+              severity: 'high',
+              remediation: `1. Go to https://github.com/organizations/${orgLogin}/settings/security\n2. Under "Authentication security", check "Require two-factor authentication for everyone"`,
+              evidence: {
+                organization: orgLogin,
+                twoFactorRequirementEnabled: false,
+                source: 'organization-settings',
+                checkedAt,
+              },
+            });
+            continue;
+          }
+
           ctx.warn(
             `Cannot check 2FA for ${orgLogin}: the account must be an organization owner to use the 2FA filter.`,
           );
