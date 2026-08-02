@@ -94,6 +94,21 @@ const CIS_CHECKS: CisCheck[] = [
  * Log-group names cannot contain ":", so the trailing ":*" (all log streams) suffix
  * is stripped safely. Returns null when the ARN is missing or malformed.
  */
+/**
+ * Region an ARN belongs to, or null if it is missing/malformed.
+ *
+ * A multi-region CloudTrail is visible from every region, but its CloudWatch
+ * Logs group lives in exactly one. Metric filters must therefore be read from
+ * the log group's own region, not from whichever region happens to be scanning.
+ */
+export function regionFromArn(arn: string | undefined): string | null {
+  if (!arn) return null;
+  const parts = arn.split(':');
+  // arn:partition:service:region:account:...
+  const region = parts.length > 3 ? parts[3]?.trim() : '';
+  return region ? region : null;
+}
+
 export function logGroupNameFromArn(arn: string | undefined): string | null {
   if (!arn) return null;
   const marker = ':log-group:';
@@ -127,6 +142,7 @@ export class CloudWatchAdapter implements AwsServiceAdapter {
     // resolve it here (zero extra AWS calls: DescribeTrails is already invoked)
     // and surface it in each finding's remediation text + evidence.
     let cloudWatchLogGroupName: string | null = null;
+    let cloudWatchLogGroupRegion: string | null = null;
     try {
       const ctClient = new CloudTrailClient({ credentials, region });
       const trailsResp = await ctClient.send(new DescribeTrailsCommand({}));
@@ -135,6 +151,9 @@ export class CloudWatchAdapter implements AwsServiceAdapter {
         (trail) => !!trail.CloudWatchLogsLogGroupArn,
       );
       cloudWatchLogGroupName = logGroupNameFromArn(
+        integratedTrail?.CloudWatchLogsLogGroupArn,
+      );
+      cloudWatchLogGroupRegion = regionFromArn(
         integratedTrail?.CloudWatchLogsLogGroupArn,
       );
 
@@ -160,9 +179,26 @@ export class CloudWatchAdapter implements AwsServiceAdapter {
       // If prerequisite check fails (permissions), fall through to existing behavior
     }
 
+    // A multi-region trail is visible from every region, but its log group —
+    // and therefore its metric filters and alarms — live in exactly one. Reading
+    // them from the scan region reports every CIS control as missing on an
+    // account that is correctly configured.
+    const targetRegion = cloudWatchLogGroupRegion ?? region;
+    const filtersClient =
+      targetRegion === region
+        ? logsClient
+        : new CloudWatchLogsClient({ credentials, region: targetRegion });
+    const alarmsClient =
+      targetRegion === region
+        ? cwClient
+        : new CloudWatchClient({ credentials, region: targetRegion });
+
     try {
-      // Fetch all metric filters (limit to 1000)
-      const allFilters = await this.fetchAllMetricFilters(logsClient);
+      // Fetch metric filters for the trail's log group (limit to 1000)
+      const allFilters = await this.fetchAllMetricFilters(
+        filtersClient,
+        cloudWatchLogGroupName ?? undefined,
+      );
 
       // Check each CIS control
       for (const check of CIS_CHECKS) {
@@ -226,7 +262,7 @@ export class CloudWatchAdapter implements AwsServiceAdapter {
           continue;
         }
 
-        const hasAlarm = await this.checkAlarmExists(cwClient, metricName);
+        const hasAlarm = await this.checkAlarmExists(alarmsClient, metricName);
 
         if (!hasAlarm) {
           findings.push(
@@ -271,7 +307,10 @@ export class CloudWatchAdapter implements AwsServiceAdapter {
     return findings;
   }
 
-  private async fetchAllMetricFilters(client: CloudWatchLogsClient): Promise<
+  private async fetchAllMetricFilters(
+    client: CloudWatchLogsClient,
+    logGroupName?: string,
+  ): Promise<
     {
       filterName?: string;
       filterPattern?: string;
@@ -290,7 +329,7 @@ export class CloudWatchAdapter implements AwsServiceAdapter {
 
     do {
       const resp = await client.send(
-        new DescribeMetricFiltersCommand({ nextToken }),
+        new DescribeMetricFiltersCommand({ nextToken, logGroupName }),
       );
 
       for (const filter of resp.metricFilters ?? []) {

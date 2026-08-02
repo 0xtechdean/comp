@@ -24,7 +24,7 @@ jest.mock('@aws-sdk/client-cloudwatch', () => ({
   })),
 }));
 
-import { CloudWatchAdapter, logGroupNameFromArn } from './cloudwatch.adapter';
+import { CloudWatchAdapter, logGroupNameFromArn, regionFromArn } from './cloudwatch.adapter';
 
 const CREDS = {
   accessKeyId: 'AKIA',
@@ -153,5 +153,28 @@ describe('CloudWatchAdapter — CloudTrail log group resolution', () => {
     expect(missing).toBeDefined();
     expect(missing!.evidence?.cloudWatchLogGroupName).toBeUndefined();
     expect(missing!.remediation).toContain("CloudWatch Logs log group");
+  });
+});
+
+describe('regionFromArn', () => {
+  it('extracts the region from a CloudWatch Logs ARN', () => {
+    expect(
+      regionFromArn(
+        'arn:aws:logs:us-east-1:580772532220:log-group:/aws/cloudtrail/anyray-org-trail:*',
+      ),
+    ).toBe('us-east-1');
+  });
+
+  it('returns null for a missing or malformed ARN', () => {
+    expect(regionFromArn(undefined)).toBeNull();
+    expect(regionFromArn('not-an-arn')).toBeNull();
+    expect(regionFromArn('arn:aws:logs::123:log-group:x')).toBeNull();
+  });
+
+  it('pairs with logGroupNameFromArn on the same ARN', () => {
+    const arn =
+      'arn:aws:logs:eu-central-1:1234:log-group:/aws/cloudtrail/t:*';
+    expect(regionFromArn(arn)).toBe('eu-central-1');
+    expect(logGroupNameFromArn(arn)).toBe('/aws/cloudtrail/t');
   });
 });
