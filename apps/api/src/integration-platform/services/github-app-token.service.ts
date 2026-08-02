@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { createSign } from 'node:crypto';
+import { createPrivateKey, createSign } from 'node:crypto';
 import {
   getManifest,
   type GitHubAppConfig,
@@ -56,27 +56,59 @@ const isInstallationTokenResponse = (
  * three with an opaque "DECODER routines::unsupported", so normalise here
  * rather than making every operator debug it.
  */
+const PEM_LABELS = ['RSA PRIVATE KEY', 'PRIVATE KEY', 'EC PRIVATE KEY'];
+
+const isParseableKey = (pem: string): boolean => {
+  try {
+    createPrivateKey(pem);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const wrapBase64 = (body: string): string | null =>
+  body.match(/.{1,64}/g)?.join('\n') ?? null;
+
 export const normalizePrivateKey = (raw: string): string => {
   const unescaped = raw
     .trim()
     .replace(/\\r\\n|\\n/g, '\n')
     .replace(/\r\n?/g, '\n');
 
-  // Already has real line breaks in the body — nothing to rebuild.
-  if (unescaped.includes('\n')) return unescaped;
+  if (unescaped.startsWith('-----BEGIN')) {
+    // Already line-broken — nothing to rebuild.
+    if (unescaped.includes('\n')) return unescaped;
 
-  // Single-line paste: the base64 body must be re-wrapped at 64 columns, since
-  // PEM is only valid as a line-broken block.
-  const match = unescaped.match(
-    /^-----BEGIN ([A-Z0-9 ]+)-----\s*(.*?)\s*-----END \1-----$/,
-  );
-  if (!match) return unescaped;
+    // Single-line paste: PEM is only valid as a 64-column block.
+    const match = unescaped.match(
+      /^-----BEGIN ([A-Z0-9 ]+)-----\s*(.*?)\s*-----END \1-----$/,
+    );
+    if (!match) return unescaped;
 
-  const [, label, body] = match;
-  const wrapped = body.replace(/\s+/g, '').match(/.{1,64}/g)?.join('\n');
+    const [, label, body] = match;
+    const wrapped = wrapBase64(body.replace(/\s+/g, ''));
+    return wrapped
+      ? `-----BEGIN ${label}-----\n${wrapped}\n-----END ${label}-----\n`
+      : unescaped;
+  }
+
+  // No banner at all — someone copied the body and left the ----- lines
+  // behind, which is easy to do when selecting inside a file viewer. The
+  // banner declares the encoding, so try each until one parses rather than
+  // guessing PKCS#1 vs PKCS#8.
+  const body = unescaped.replace(/\s+/g, '');
+  if (!body || !/^[A-Za-z0-9+/=]+$/.test(body)) return unescaped;
+
+  const wrapped = wrapBase64(body);
   if (!wrapped) return unescaped;
 
-  return `-----BEGIN ${label}-----\n${wrapped}\n-----END ${label}-----\n`;
+  for (const label of PEM_LABELS) {
+    const candidate = `-----BEGIN ${label}-----\n${wrapped}\n-----END ${label}-----\n`;
+    if (isParseableKey(candidate)) return candidate;
+  }
+
+  return unescaped;
 };
 
 /**

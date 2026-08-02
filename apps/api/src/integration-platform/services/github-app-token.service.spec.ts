@@ -292,3 +292,29 @@ describe('normalizePrivateKey', () => {
     expect(createPrivateKey(normalizePrivateKey(oneLine))).toBeDefined();
   });
 });
+
+describe('normalizePrivateKey — body-only pastes', () => {
+  const bodyOnly = (pem: string) =>
+    pem
+      .trim()
+      .split('\n')
+      .filter((l) => !l.startsWith('-----'))
+      .join('\n');
+
+  it('rebuilds the banners when only the base64 body was copied', () => {
+    const body = bodyOnly(PRIVATE_KEY_PEM);
+    expect(() => createPrivateKey(body)).toThrow();
+    expect(createPrivateKey(normalizePrivateKey(body))).toBeDefined();
+  });
+
+  it('rebuilds a PKCS#1 key, not just PKCS#8', () => {
+    const pkcs1 = privateKey.export({ type: 'pkcs1', format: 'pem' }).toString();
+    const body = bodyOnly(pkcs1);
+    expect(createPrivateKey(normalizePrivateKey(body))).toBeDefined();
+  });
+
+  it('leaves a non-key value alone rather than inventing a PEM', () => {
+    const secret = '0'.repeat(40);
+    expect(normalizePrivateKey(secret)).toBe(secret);
+  });
+});
