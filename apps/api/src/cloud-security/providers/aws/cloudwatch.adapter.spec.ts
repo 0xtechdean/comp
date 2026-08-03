@@ -129,6 +129,52 @@ describe('CloudWatchAdapter — CloudTrail log group resolution', () => {
     expect(noTransform!.remediation).toContain('logGroupName set to "existing-lg"');
   });
 
+  it('recognises the CIS-conformant 4.1 pattern instead of reporting it missing', async () => {
+    mockTrailSend.mockResolvedValue({
+      trailList: [
+        {
+          Name: 'main',
+          CloudWatchLogsLogGroupArn:
+            'arn:aws:logs:us-east-1:123:log-group:my-ct-logs:*',
+        },
+      ],
+    });
+    // Verbatim CIS 4.1 pattern. It matches on UnauthorizedOperation — the
+    // errorCode CloudTrail actually emits — not UnauthorizedAccess. Checking
+    // for the latter reported this control as missing on accounts whose filter
+    // was present and conformant.
+    mockLogsSend.mockResolvedValue({
+      metricFilters: [
+        {
+          filterName: 'CIS-UnauthorizedAPICalls',
+          filterPattern:
+            '{ ($.errorCode = "*UnauthorizedOperation") || ($.errorCode = "AccessDenied*") }',
+          logGroupName: 'my-ct-logs',
+          metricTransformations: [
+            { metricName: 'UnauthorizedAPICalls', metricNamespace: 'CIS' },
+          ],
+        },
+      ],
+    });
+
+    const findings = await scan();
+
+    // The filter is recognised, so no "metric filter missing" finding. The
+    // separate "alarm missing" finding is still expected — this mock
+    // deliberately configures no alarm — which is what makes this assertion
+    // specific to the keyword match rather than to CIS 4.1 as a whole.
+    expect(
+      findings.find((f) =>
+        f.title.includes('Unauthorized API calls — metric filter missing'),
+      ),
+    ).toBeUndefined();
+    expect(
+      findings.find((f) =>
+        f.title.includes('Unauthorized API calls — alarm missing'),
+      ),
+    ).toBeDefined();
+  });
+
   it('returns the prerequisite finding when no trail integrates with CloudWatch Logs', async () => {
     mockTrailSend.mockResolvedValue({
       trailList: [{ Name: 'main' }], // no CloudWatchLogsLogGroupArn

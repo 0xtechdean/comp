@@ -27,8 +27,14 @@ const CIS_CHECKS: CisCheck[] = [
   },
   {
     id: 'cis-4.1',
+    // The CIS benchmark's own filter pattern for 4.1 is
+    //   { ($.errorCode = "*UnauthorizedOperation") || ($.errorCode = "AccessDenied*") }
+    // so a correctly configured account matches on UnauthorizedOperation, not
+    // UnauthorizedAccess — the latter is not an errorCode CloudTrail emits.
+    // Matching the wrong token reported this control as missing on accounts
+    // where the filter was present and CIS-conformant.
     name: 'Unauthorized API calls',
-    keywords: ['UnauthorizedAccess', 'AccessDenied'],
+    keywords: ['UnauthorizedOperation', 'AccessDenied'],
   },
   {
     id: 'cis-4.5',
