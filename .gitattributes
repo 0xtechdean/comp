@@ -1,0 +1,6 @@
+# Normalize line endings on checkout and in the index. Without this, a
+# checkout with core.autocrlf=true (a Windows default) rewrites LF files to
+# CRLF in the working tree, and any later commit stores them that way —
+# producing whole-file diffs and breaking tools that reject CRLF (codesign
+# rejects a CRLF entitlements plist with "AMFIUnserializeXML: syntax error").
+* text=auto eol=lf
