@@ -217,4 +217,58 @@ describe('TasksService approval gating', () => {
       expect(where.status).toEqual({ not: 'in_review' });
     });
   });
+
+  // A recurring control is only auditable if the system records WHEN it was
+  // performed. Completion used to be dated solely by the automated
+  // cloud-security path, leaving every manually-performed control undated.
+  describe('lastCompletedAt', () => {
+    it('bulk done records the completion time', async () => {
+      orgFindUnique.mockResolvedValue({ evidenceApprovalEnabled: false });
+      taskUpdateMany.mockResolvedValue({ count: 1 });
+
+      await service.updateTasksStatus(
+        ORG_ID,
+        [TASK_ID],
+        TaskStatus.done,
+        undefined,
+        USER_ID,
+      );
+
+      const { lastCompletedAt } = taskUpdateMany.mock.calls[0][0].data;
+      expect(lastCompletedAt).toBeInstanceOf(Date);
+    });
+
+    it('bulk non-done leaves the previous completion time untouched', async () => {
+      orgFindUnique.mockResolvedValue({ evidenceApprovalEnabled: false });
+      taskUpdateMany.mockResolvedValue({ count: 1 });
+
+      await service.updateTasksStatus(
+        ORG_ID,
+        [TASK_ID],
+        TaskStatus.todo,
+        undefined,
+        USER_ID,
+      );
+
+      expect(taskUpdateMany.mock.calls[0][0].data).not.toHaveProperty(
+        'lastCompletedAt',
+      );
+    });
+
+    it('single-task done records the completion time', async () => {
+      taskFindFirst.mockResolvedValue(existing(false));
+      memberFindFirst.mockResolvedValue({ id: 'mem_1' });
+      taskUpdate.mockResolvedValue({ id: TASK_ID, assignee: null });
+
+      await service.updateTask(
+        ORG_ID,
+        TASK_ID,
+        { status: TaskStatus.done },
+        USER_ID,
+      );
+
+      const { lastCompletedAt } = taskUpdate.mock.calls[0][0].data;
+      expect(lastCompletedAt).toBeInstanceOf(Date);
+    });
+  });
 });
