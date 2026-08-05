@@ -405,12 +405,21 @@ export class TasksService {
           ? { notRelevantJustification: notRelevantJustification ?? null }
           : { notRelevantJustification: null };
 
+      // Record WHEN the task was completed. Only the automated cloud-security
+      // path used to set this, so a human marking a recurring control done left
+      // `lastCompletedAt` null — the control had no dated evidence of ever being
+      // performed, and calculateNextReview (which derives the next occurrence
+      // from this field) returned null, so the task never rescheduled itself.
+      // Never cleared on a move away from `done`: the completion did happen.
+      const completionData = status === TaskStatus.done ? { lastCompletedAt: new Date() } : {};
+
       const result = await db.task.updateMany({
         where,
         data: {
           status,
           updatedAt: new Date(),
           ...justificationData,
+          ...completionData,
           ...(reviewDate !== undefined ? { reviewDate } : {}),
         },
       });
@@ -625,6 +634,7 @@ export class TasksService {
         integrationScheduleFrequency?: TaskFrequency;
         department?: string | null;
         reviewDate?: Date | null;
+        lastCompletedAt?: Date;
         notRelevantJustification?: string | null;
       } = {};
 
@@ -709,6 +719,13 @@ export class TasksService {
       }
       if (updateData.reviewDate !== undefined) {
         dataToUpdate.reviewDate = updateData.reviewDate;
+      }
+
+      // Record WHEN it was completed — the dated evidence a recurring control
+      // needs. Set regardless of whether a review date was supplied; see the
+      // matching comment in updateTasksStatus.
+      if (updateData.status === TaskStatus.done) {
+        dataToUpdate.lastCompletedAt = new Date();
       }
 
       // When status changes to done, set review date based on frequency

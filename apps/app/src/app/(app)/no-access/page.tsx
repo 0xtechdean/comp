@@ -28,6 +28,13 @@ export default async function NoAccess() {
   const organizations = meRes.data?.organizations ?? [];
   const currentOrg = orgRes.data ?? null;
 
+  // Self-hosted instances serve the employee portal from their own domain, so
+  // derive the link from NEXT_PUBLIC_PORTAL_URL (matching the digest task) and
+  // only fall back to the SaaS URL when it is unset.
+  const portalUrl =
+    process.env.NEXT_PUBLIC_PORTAL_URL ?? 'https://portal.trycomp.ai';
+  const portalHost = portalUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+
   return (
     <div className="flex h-dvh flex-col">
       <Header organizationId={currentOrg?.id} hideChat={true} />
@@ -36,8 +43,8 @@ export default async function NoAccess() {
         <div className="flex flex-col text-center">
           <p>
             Your current role doesn&apos;t have access to the app. If you&apos;re looking for the employee portal, go to{' '}
-            <Link href="https://portal.trycomp.ai" className="text-primary underline">
-              portal.trycomp.ai
+            <Link href={portalUrl} className="text-primary underline">
+              {portalHost}
             </Link>
             .
           </p>

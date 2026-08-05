@@ -151,9 +151,20 @@ RUN cd packages/auth && bun run build \
  && cd ../email && bun run build \
  && cd ../company && bun run build
 
-# Ensure Next build has required public env at build-time
+# Ensure Next build has required public env at build-time.
+# NEXT_PUBLIC_* values are inlined into the client bundle at build time, so
+# every browser-facing value the portal reads must be present here. In
+# particular NEXT_PUBLIC_API_URL is the API base used by the auth client and
+# the training-completion hooks; without it the bundle falls back to
+# http://localhost:3333 and every client->API call fails in production.
 ARG NEXT_PUBLIC_BETTER_AUTH_URL
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_POSTHOG_KEY
+ARG NEXT_PUBLIC_POSTHOG_HOST
 ENV NEXT_PUBLIC_BETTER_AUTH_URL=$NEXT_PUBLIC_BETTER_AUTH_URL \
+    NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
+    NEXT_PUBLIC_POSTHOG_KEY=$NEXT_PUBLIC_POSTHOG_KEY \
+    NEXT_PUBLIC_POSTHOG_HOST=$NEXT_PUBLIC_POSTHOG_HOST \
     NEXT_TELEMETRY_DISABLED=1 NODE_ENV=production \
     NEXT_OUTPUT_STANDALONE=true \
     NODE_OPTIONS=--max_old_space_size=6144
