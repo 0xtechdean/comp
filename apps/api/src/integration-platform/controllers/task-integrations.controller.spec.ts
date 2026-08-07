@@ -290,6 +290,11 @@ describe('TaskIntegrationsController', () => {
     // test that opts into `true` never leaks into the next (clearAllMocks keeps
     // implementations).
     mockedIsCodeManifest.mockReturnValue(false);
+    // Default: no dynamic row, so the provider is STATIC. Set here for the same
+    // reason as above — `clearAllMocks` keeps implementations, so without this a
+    // test that opts into a dynamic row leaked it into every test that followed,
+    // silently flipping them to the held/pending path.
+    mockDynamicIntegrationFindFirst.mockResolvedValue(null);
     // Default: no active exceptions (existing tests behave as before).
     mockFindingExceptionFindMany.mockResolvedValue([]);
     mockCheckRunRepository.create.mockImplementation(() =>
@@ -500,8 +505,12 @@ describe('TaskIntegrationsController', () => {
       expect(mockTaskUpdate).not.toHaveBeenCalled();
     });
 
-    it('still fails the task for a dynamic integration on a REAL finding', async () => {
+    it('HOLDS a dynamic integration finding even when it looks REAL (agent decides)', async () => {
       // Same dynamic provider, but a genuine compliance finding (no error signal).
+      // comp deliberately does NO classification any more: it cannot tell a real
+      // fail from our own broken check, so EVERY dynamic failure is held for the
+      // self-heal agent. Until 2026-06-30 this case was classified here and shown
+      // as a red 'failed'; that logic was removed on purpose.
       mockProviderRepository.findById.mockResolvedValue({
         id: 'prov_neon',
         slug: 'neon',
@@ -529,12 +538,14 @@ describe('TaskIntegrationsController', () => {
         checkId: 'aws-s3-encryption',
       });
 
-      expect(result.taskStatus).toBe('failed');
-      // A genuine compliance finding is a REAL failure — the run row stays
-      // 'failed' (visible to the customer), never held.
+      // Held → indeterminate: the task is neither failed nor flipped to done.
+      expect(result.taskStatus).toBeNull();
+      expect(mockTaskUpdate).not.toHaveBeenCalled();
+      // The run row is held as 'inconclusive' with failedCount 0 — a held finding
+      // is not a confirmed failure, so no consumer can read it as one.
       expect(mockCheckRunRepository.complete).toHaveBeenCalledWith(
         'icr_x',
-        expect.objectContaining({ status: 'failed' }),
+        expect.objectContaining({ status: 'inconclusive', failedCount: 0 }),
       );
     });
 
