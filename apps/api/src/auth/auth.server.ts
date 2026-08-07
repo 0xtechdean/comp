@@ -84,6 +84,17 @@ const corsRedisClient =
       })
     : null;
 
+/**
+ * Published custom trust-portal domains, for the CORS allowlist.
+ *
+ * Deliberately does NOT require the DNS-verification flag — see PR #2371. That
+ * flag only flips once an admin finishes our DNS check, but Vercel serves the
+ * portal as soon as the domain is attached, so requiring it made every
+ * client-side call from a live portal fail CORS ("Request Access" →
+ * "Failed to fetch"). It regressed once as a one-line change in c21c6565d and
+ * went unnoticed for months. auth-server-origins.spec.ts guards the function
+ * body, so keep this explanation out here where it cannot trip the check.
+ */
 async function getCustomDomains(): Promise<Set<string>> {
   // Try Redis cache first (non-fatal if Redis is unavailable)
   try {
@@ -100,7 +111,6 @@ async function getCustomDomains(): Promise<Set<string>> {
     const trusts = await db.trust.findMany({
       where: {
         domain: { not: null },
-        domainVerified: true,
         status: 'published',
       },
       select: { domain: true },
