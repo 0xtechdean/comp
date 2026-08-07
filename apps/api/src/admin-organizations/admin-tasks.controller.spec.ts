@@ -18,6 +18,9 @@ jest.mock('../auth/auth.server', () => ({
 }));
 
 jest.mock('@db', () => ({
+  // Enums this spec does not name are still read at module scope further down
+  // the import chain; pull them all in, then let the explicit stubs below win.
+  ...jest.requireActual('@prisma/client'),
   db: {},
   TaskStatus: {
     todo: 'todo',
@@ -25,6 +28,17 @@ jest.mock('@db', () => ({
     done: 'done',
     not_applicable: 'not_applicable',
   },
+}));
+
+// `@trycompai/auth`'s barrel re-exports the permission tables, which import
+// better-auth — shipped ESM-only, and jest cannot transform it. This spec never
+// exercises permissions; it just sits downstream of a chain that imports the
+// barrel. Keep the participation half real (no better-auth dependency) and stub
+// the rest.
+jest.mock('@trycompai/auth', () => ({
+  ...jest.requireActual('@trycompai/auth/participation'),
+  BUILT_IN_ROLE_OBLIGATIONS: {},
+  allRoles: {},
 }));
 
 describe('AdminTasksController', () => {

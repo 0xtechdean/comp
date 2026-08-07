@@ -1,4 +1,7 @@
 jest.mock('@db', () => ({
+  // Enums this spec does not name are read at module scope further down the
+  // import chain; pull them all in, then let the explicit stubs below win.
+  ...jest.requireActual('@prisma/client'),
   db: {},
   FindingType: {
     soc2: 'soc2',
@@ -235,7 +238,12 @@ describe('FrameworksController', () => {
   });
 
   describe('syncFramework', () => {
-    const mockAuthContext = { userId: 'usr_1', organizationId: 'org_1' };
+    // Both endpoints now require memberId and reject the request without it.
+    const mockAuthContext = {
+      userId: 'usr_1',
+      memberId: 'mem_1',
+      organizationId: 'org_1',
+    };
 
     it('should delegate to syncService and return { data: result }', async () => {
       const mockResult = { kind: 'synced', frameworkInstanceId: 'fi_1', syncOperationId: 'fso_1' };
@@ -253,7 +261,7 @@ describe('FrameworksController', () => {
         organizationId: 'org_1',
         frameworkInstanceId: 'fi_1',
         targetVersionId: 'fvr_2',
-        userId: 'usr_1',
+        memberId: 'mem_1',
       });
     });
 
@@ -273,7 +281,12 @@ describe('FrameworksController', () => {
   });
 
   describe('rollbackFramework', () => {
-    const mockAuthContext = { userId: 'usr_1', organizationId: 'org_1' };
+    // Both endpoints now require memberId and reject the request without it.
+    const mockAuthContext = {
+      userId: 'usr_1',
+      memberId: 'mem_1',
+      organizationId: 'org_1',
+    };
 
     it('should delegate to rollbackService and return { data: result }', async () => {
       const mockResult = { rollbackOperationId: 'fso_rb_1' };
@@ -291,7 +304,7 @@ describe('FrameworksController', () => {
         organizationId: 'org_1',
         frameworkInstanceId: 'fi_1',
         syncOperationId: 'fso_1',
-        userId: 'usr_1',
+        memberId: 'mem_1',
       });
     });
 

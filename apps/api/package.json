@@ -172,6 +172,9 @@
         ],
         "coverageDirectory": "../coverage",
         "testEnvironment": "node",
+        "setupFiles": [
+            "<rootDir>/../test/jest-setup-env.ts"
+        ],
         "moduleNameMapper": {
             "^@db$": "<rootDir>/../prisma/index",
             "^@/(.*)$": "<rootDir>/$1",

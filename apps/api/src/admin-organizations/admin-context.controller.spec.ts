@@ -14,7 +14,14 @@ jest.mock('../auth/auth.server', () => ({
   auth: { api: {} },
 }));
 
-jest.mock('@db', () => ({ db: {} }));
+// '@db' re-exports every Prisma enum alongside the client, and the audit-log
+// interceptor reads AuditLogEntityType at module scope — a bare `{ db: {} }`
+// stub left it undefined. Enums come from '@prisma/client' (no client is
+// constructed); only `db` itself is stubbed.
+jest.mock('@db', () => ({
+  ...jest.requireActual('@prisma/client'),
+  db: {},
+}));
 
 describe('AdminContextController', () => {
   let controller: AdminContextController;

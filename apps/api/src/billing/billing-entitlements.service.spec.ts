@@ -45,7 +45,16 @@ describe('BillingEntitlementsService', () => {
   let tx: MockTx;
   let service: BillingEntitlementsService;
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   beforeEach(() => {
+    // A subscription counts as active only while currentPeriodEnd is in the
+    // future. Every fixture below is dated April–June 2026, so against the real
+    // clock they all read as expired and the suite silently rotted into
+    // asserting the not_configured path. Freeze inside that window.
+    jest.useFakeTimers({ now: Date.parse('2026-05-15T00:00:00.000Z') });
     jest.clearAllMocks();
     tx = {
       organizationBillingSubscription: {

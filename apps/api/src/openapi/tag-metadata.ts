@@ -97,6 +97,10 @@ export const PUBLIC_TAG_METADATA: Record<string, PublicTagMetadata> = {
     description:
       'Connect vendor systems, configure OAuth apps, run compliance checks, sync employees, manage variables, and collect automated evidence.',
   },
+  ISMS: {
+    description:
+      'Build and maintain the ISO 27001 information security management system: scope and context documents, Statement of Applicability, risk and asset registers, approvals, and versioned exports.',
+  },
   'Knowledge Base': {
     description:
       'Upload source documents, process them for retrieval, and manage reusable manual answers that power questionnaires and AI policy workflows.',

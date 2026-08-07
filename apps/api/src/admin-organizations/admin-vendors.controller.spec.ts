@@ -15,6 +15,9 @@ jest.mock('../auth/auth.server', () => ({
 }));
 
 jest.mock('@db', () => ({
+  // Enums this spec does not name are still read at module scope further down
+  // the import chain; pull them all in, then let the explicit stubs below win.
+  ...jest.requireActual('@prisma/client'),
   db: {},
   VendorCategory: {
     cloud: 'cloud',

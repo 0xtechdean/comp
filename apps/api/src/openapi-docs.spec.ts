@@ -211,7 +211,11 @@ describe('OpenAPI document', () => {
         | undefined;
 
       expect(policies?.summary).toBe('List compliance policies');
-      expect(policies?.description).toContain('SOC 2');
+      // Pins that the copy is operation-specific rather than boilerplate. This
+      // asserted on 'SOC 2' until d8ce45093 (2026-05-30) rewrote the
+      // description around the actual query parameters, which is the stronger
+      // signal the surrounding test is named for.
+      expect(policies?.description).toContain('includeArchived');
       expect(policies?.['x-mint']?.metadata?.title).toBe(
         'List compliance policies | Comp AI API',
       );

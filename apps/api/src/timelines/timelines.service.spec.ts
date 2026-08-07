@@ -158,6 +158,10 @@ describe('TimelinesService', () => {
       return cloneTimeline(timelineState);
     });
 
+    // findAllForOrganization is read-only now — it enriches phases with live
+    // percentages in memory. The cascade/regression writes these tests assert on
+    // moved to reconcileAutoPhasesForOrganization, which callers run first.
+    await service.reconcileAutoPhasesForOrganization(orgId);
     const result = await service.findAllForOrganization(orgId);
 
     expect(lifecycle.completePhase).toHaveBeenCalledTimes(3);
@@ -220,6 +224,10 @@ describe('TimelinesService', () => {
       people: { total: 1, completed: 1 },
     });
 
+    // findAllForOrganization is read-only now — it enriches phases with live
+    // percentages in memory. The cascade/regression writes these tests assert on
+    // moved to reconcileAutoPhasesForOrganization, which callers run first.
+    await service.reconcileAutoPhasesForOrganization(orgId);
     const result = await service.findAllForOrganization(orgId);
 
     expect(lifecycle.completePhase).not.toHaveBeenCalled();
@@ -284,6 +292,10 @@ describe('TimelinesService', () => {
       people: { total: 1, completed: 1 },
     });
 
+    // findAllForOrganization is read-only now — it enriches phases with live
+    // percentages in memory. The cascade/regression writes these tests assert on
+    // moved to reconcileAutoPhasesForOrganization, which callers run first.
+    await service.reconcileAutoPhasesForOrganization(orgId);
     const result = await service.findAllForOrganization(orgId);
 
     expect(mockDb.timelinePhase.update).toHaveBeenCalledWith({
@@ -368,6 +380,11 @@ describe('TimelinesService', () => {
             return phase;
           }),
         },
+        // Regression on a COMPLETED timeline flips the instance back to ACTIVE,
+        // a write the source added after this tx double was written.
+        timelineInstance: {
+          updateMany: jest.fn(async () => ({ count: 0 })),
+        },
       };
       return fn(tx);
     });
@@ -378,6 +395,10 @@ describe('TimelinesService', () => {
       people: { total: 2, completed: 1 },
     });
 
+    // findAllForOrganization is read-only now — it enriches phases with live
+    // percentages in memory. The cascade/regression writes these tests assert on
+    // moved to reconcileAutoPhasesForOrganization, which callers run first.
+    await service.reconcileAutoPhasesForOrganization(orgId);
     const result = await service.findAllForOrganization(orgId);
 
     expect(mockDb.$transaction).toHaveBeenCalledTimes(1);
@@ -464,6 +485,11 @@ describe('TimelinesService', () => {
             return phase;
           }),
         },
+        // Regression on a COMPLETED timeline flips the instance back to ACTIVE,
+        // a write the source added after this tx double was written.
+        timelineInstance: {
+          updateMany: jest.fn(async () => ({ count: 0 })),
+        },
       };
       return fn(tx);
     });
@@ -474,6 +500,9 @@ describe('TimelinesService', () => {
       people: { total: 1, completed: 1 },
     });
 
+    // findAllForOrganization is read-only now; the regression re-open it
+    // asserts on happens in reconcileAutoPhasesForOrganization.
+    await service.reconcileAutoPhasesForOrganization(orgId);
     const result = await service.findAllForOrganization(orgId);
 
     expect(mockDb.$transaction).toHaveBeenCalledTimes(1);
@@ -735,9 +764,12 @@ describe('TimelinesService', () => {
       },
     ]);
 
-    const findAllSpy = jest
-      .spyOn(service, 'findAllForOrganization')
-      .mockResolvedValue([] as any);
+    jest.spyOn(service, 'findAllForOrganization').mockResolvedValue([] as any);
+    // The grace bypass moved off the read path onto the reconcile it now runs
+    // before returning.
+    const reconcileSpy = jest
+      .spyOn(service, 'reconcileAutoPhasesForOrganization')
+      .mockResolvedValue(undefined);
 
     await service.recreateAllForOrganization('org_1');
 
@@ -746,7 +778,7 @@ describe('TimelinesService', () => {
       frameworkInstance: expect.objectContaining({ id: 'fi_1' }),
       forceRefresh: true,
     });
-    expect(findAllSpy).toHaveBeenLastCalledWith('org_1', {
+    expect(reconcileSpy).toHaveBeenLastCalledWith('org_1', {
       bypassRegressionGrace: true,
     });
   });

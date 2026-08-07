@@ -249,7 +249,9 @@ describe('RemediationController', () => {
         actionId,
         organizationId: orgId,
       });
-      expect(result).toEqual({ status: 'rolled_back' });
+      // The endpoint returns the service result verbatim now — the connection,
+      // remediation key and resource id are part of the response.
+      expect(result).toEqual(rollbackResult);
     });
 
     it('should throw BAD_REQUEST when service throws', async () => {

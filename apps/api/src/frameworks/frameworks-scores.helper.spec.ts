@@ -131,6 +131,9 @@ describe('frameworks-scores.helper', () => {
         where: {
           organizationId: 'org_1',
           memberId: { in: ['mem_1', 'mem_2'] },
+          // Integration-imported devices are inventory records, not proof the
+          // member installed the agent, so they cannot satisfy this step.
+          source: { not: 'integration' },
         },
         select: { memberId: true },
         distinct: ['memberId'],

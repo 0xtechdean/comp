@@ -9,17 +9,23 @@ const mockDb = {
   frameworkControlDocumentTypeLink: { createMany: jest.fn() },
 };
 
-jest.mock('@db', () => ({
-  db: new Proxy(
+jest.mock('@db', () => {
+  const client: unknown = new Proxy(
     {},
     {
       get(_target, prop) {
-        return mockDb[prop] ?? {};
+        // The source now runs its writes inside `db.$transaction` when no
+        // client is passed in. Hand the callback this same mock client so the
+        // per-table stubs below still observe the calls.
+        if (prop === '$transaction') {
+          return (fn: (tx: unknown) => unknown) => fn(client);
+        }
+        return mockDb[prop as keyof typeof mockDb] ?? {};
       },
     },
-  ),
-  Prisma: {},
-}));
+  );
+  return { db: client, Prisma: {} };
+});
 
 describe('syncDirectLinksToCustomFrameworks', () => {
   beforeEach(() => jest.clearAllMocks());

@@ -5,6 +5,9 @@ const mockCreate = jest.fn().mockResolvedValue({});
 const mockContextFind = jest.fn();
 
 jest.mock('@db', () => ({
+  // Enums this spec does not name are read at module scope by the real
+  // audit-log constants; pull them all in, then let the stubs below win.
+  ...jest.requireActual('@prisma/client'),
   AuditLogEntityType: {
     organization: 'organization',
     finding: 'finding',
@@ -27,7 +30,10 @@ jest.mock('@db', () => ({
   },
 }));
 
+// Spread the real module so constants added later (SENSITIVE_KEY_PATTERN was)
+// don't arrive here as undefined; override only what this spec needs neutered.
 jest.mock('../audit/audit-log.constants', () => ({
+  ...jest.requireActual('../audit/audit-log.constants'),
   MUTATION_METHODS: new Set(['POST', 'PATCH', 'PUT', 'DELETE']),
   SENSITIVE_KEYS: new Set<string>(),
 }));

@@ -15,7 +15,25 @@ jest.mock('../auth/auth.server', () => ({
   auth: { api: {} },
 }));
 
-jest.mock('@db', () => ({ db: {} }));
+// '@db' re-exports every Prisma enum alongside the client. The chain below
+// reads enums at module scope, so a bare `{ db: {} }` stub left them undefined.
+// Take the enums from '@prisma/client' — that gets them without constructing a
+// client — and stub only `db` itself.
+jest.mock('@db', () => ({
+  ...jest.requireActual('@prisma/client'),
+  db: {},
+}));
+// `@trycompai/auth`'s barrel re-exports the permission tables, which import
+// better-auth — shipped ESM-only, and jest cannot transform it. This spec never
+// exercises permissions (the service is mocked wholesale); it just sits
+// downstream of a chain that imports the barrel. Keep the participation half
+// real (it has no better-auth dependency) and stub the rest.
+jest.mock('@trycompai/auth', () => ({
+  ...jest.requireActual('@trycompai/auth/participation'),
+  BUILT_IN_ROLE_OBLIGATIONS: {},
+  allRoles: {},
+}));
+
 
 describe('AdminEvidenceController', () => {
   let controller: AdminEvidenceController;

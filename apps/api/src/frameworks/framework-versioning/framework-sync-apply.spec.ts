@@ -47,6 +47,14 @@ function mockTx() {
     frameworkControlPolicyLink: { findMany: jest.fn().mockResolvedValue([]), createMany: jest.fn().mockResolvedValue({ count: 0 }), deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
     frameworkControlTaskLink: { findMany: jest.fn().mockResolvedValue([]), createMany: jest.fn().mockResolvedValue({ count: 0 }), deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
     frameworkControlDocumentTypeLink: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'fdl_new' }), createMany: jest.fn().mockResolvedValue({ count: 0 }), deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    // applySync syncs control family assignment as structural metadata; this
+    // table was added to that path after the mock was written.
+    frameworkControlFamily: {
+      findUnique: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockResolvedValue({ id: 'fcf_new' }),
+      upsert: jest.fn().mockResolvedValue({ id: 'fcf_new' }),
+      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+    },
     $executeRaw: jest.fn().mockResolvedValue(0),
     $queryRaw: jest.fn().mockResolvedValue([]),
   } as any;

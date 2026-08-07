@@ -16,6 +16,9 @@ jest.mock('../auth/auth.server', () => ({
 }));
 
 jest.mock('@db', () => ({
+  // Enums this spec does not name are still read at module scope further down
+  // the import chain; pull them all in, then let the explicit stubs below win.
+  ...jest.requireActual('@prisma/client'),
   db: {},
   FindingStatus: {
     open: 'open',
@@ -29,11 +32,22 @@ jest.mock('@db', () => ({
   },
 }));
 
+// `@trycompai/auth`'s barrel re-exports the permission tables, which import
+// better-auth — shipped ESM-only, and jest cannot transform it. This spec never
+// exercises permissions; it just sits downstream of a chain that imports the
+// barrel. Keep the participation half real (no better-auth dependency) and stub
+// the rest.
+jest.mock('@trycompai/auth', () => ({
+  ...jest.requireActual('@trycompai/auth/participation'),
+  BUILT_IN_ROLE_OBLIGATIONS: {},
+  allRoles: {},
+}));
+
 describe('AdminFindingsController', () => {
   let controller: AdminFindingsController;
 
   const mockService = {
-    findByOrganizationId: jest.fn(),
+    listForOrganization: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
@@ -52,26 +66,25 @@ describe('AdminFindingsController', () => {
   describe('list', () => {
     it('should list findings for an organization', async () => {
       const findings = [{ id: 'fnd_1', status: 'open' }];
-      mockService.findByOrganizationId.mockResolvedValue(findings);
+      mockService.listForOrganization.mockResolvedValue(findings);
 
       const result = await controller.list('org_1');
 
-      expect(mockService.findByOrganizationId).toHaveBeenCalledWith(
-        'org_1',
-        undefined,
-      );
+      // The status filter moved into an options object.
+      expect(mockService.listForOrganization).toHaveBeenCalledWith('org_1', {
+        status: undefined,
+      });
       expect(result).toEqual(findings);
     });
 
     it('should filter by status', async () => {
-      mockService.findByOrganizationId.mockResolvedValue([]);
+      mockService.listForOrganization.mockResolvedValue([]);
 
       await controller.list('org_1', 'open');
 
-      expect(mockService.findByOrganizationId).toHaveBeenCalledWith(
-        'org_1',
-        'open',
-      );
+      expect(mockService.listForOrganization).toHaveBeenCalledWith('org_1', {
+        status: 'open',
+      });
     });
 
     it('should reject invalid status', async () => {
@@ -115,7 +128,9 @@ describe('AdminFindingsController', () => {
         'org_1',
         'fnd_1',
         dto,
-        [],
+        // Was a roles array; now a `canCreateFindings` flag, which a platform
+        // admin always satisfies.
+        true,
         true,
         'usr_admin',
         null,
