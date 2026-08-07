@@ -595,6 +595,83 @@ describe('TaskIntegrationsController', () => {
       );
     });
 
+    // `lastCompletedAt` is the only dated record that a control was actually
+    // exercised; without it a SOC 2 Type 2 period sample has nothing to read.
+    describe('lastCompletedAt', () => {
+      const singleActiveConnection = () => {
+        mockConnectionRepository.findById.mockResolvedValue({
+          id: 'conn_1',
+          organizationId: 'org_1',
+          providerId: 'prov_aws',
+          status: 'active',
+        });
+        mockConnectionRepository.findActiveByProviderAndOrg.mockResolvedValue([
+          {
+            id: 'conn_1',
+            organizationId: 'org_1',
+            providerId: 'prov_aws',
+            metadata: {},
+            variables: {},
+          },
+        ]);
+      };
+
+      it('is recorded when a passing run marks the task done', async () => {
+        singleActiveConnection();
+        mockedRunAllChecks.mockResolvedValue(passingResult());
+
+        const result = await controller.runCheckForTask(
+          'task_1',
+          'org_1',
+          body,
+        );
+
+        expect(result.taskStatus).toBe('done');
+        const { data } = mockTaskUpdate.mock.calls[0][0];
+        expect(data.status).toBe('done');
+        expect(data.lastCompletedAt).toBeInstanceOf(Date);
+      });
+
+      it('is recorded even when the task was ALREADY done', async () => {
+        // The regression this guards: automated controls sit at `done` for
+        // months and never transition, so a transition-only write would leave
+        // them with no in-period evidence that the check still runs.
+        mockTaskFindUnique.mockResolvedValue({
+          id: 'task_1',
+          organizationId: 'org_1',
+          status: 'done',
+          frequency: 'quarterly',
+        });
+        singleActiveConnection();
+        mockedRunAllChecks.mockResolvedValue(passingResult());
+
+        await controller.runCheckForTask('task_1', 'org_1', body);
+
+        const { data } = mockTaskUpdate.mock.calls[0][0];
+        expect(data.lastCompletedAt).toBeInstanceOf(Date);
+        // Not a transition, so the review date must NOT be pushed forward —
+        // otherwise a daily-passing control walks its own review out of the
+        // audit window.
+        expect(data.reviewDate).toBeUndefined();
+      });
+
+      it('is NOT recorded when the run fails the task', async () => {
+        singleActiveConnection();
+        mockedRunAllChecks.mockResolvedValue(failingResult());
+
+        const result = await controller.runCheckForTask(
+          'task_1',
+          'org_1',
+          body,
+        );
+
+        expect(result.taskStatus).toBe('failed');
+        const { data } = mockTaskUpdate.mock.calls[0][0];
+        expect(data.status).toBe('failed');
+        expect(data.lastCompletedAt).toBeUndefined();
+      });
+    });
+
     it('records a failed run for a bad account but keeps running the rest', async () => {
       mockConnectionRepository.findById.mockResolvedValue({
         id: 'conn_1',
