@@ -20,6 +20,25 @@ const EXEMPT_PATH_PREFIXES = [
 ];
 
 /**
+ * Carved back out of the exemption above.
+ *
+ * `/v1/trust-access` was exempted as "no auth, no cookies", which is true of
+ * the visitor-facing routes but not of the admin subtree living under the same
+ * prefix: approving an access request, denying one, revoking a grant and
+ * resending access email are all session-authenticated mutations. A prefix
+ * match handed them the exemption too, dropping exactly the CSRF check they
+ * most need.
+ */
+const EXEMPTION_EXCLUDED_PREFIXES = ['/v1/trust-access/admin'];
+
+function isOriginCheckExempt(path: string): boolean {
+  if (EXEMPTION_EXCLUDED_PREFIXES.some((prefix) => path.startsWith(prefix))) {
+    return false;
+  }
+  return EXEMPT_PATH_PREFIXES.some((prefix) => path.startsWith(prefix));
+}
+
+/**
  * Express middleware that validates the Origin header on state-changing requests.
  *
  * This is defense-in-depth against CSRF attacks that bypass CORS:
@@ -66,10 +85,7 @@ export function originCheckMiddleware(
   }
 
   // Allow exempt paths (webhooks, auth, etc.) for non-extension origins.
-  const isExempt = EXEMPT_PATH_PREFIXES.some((prefix) =>
-    req.path.startsWith(prefix),
-  );
-  if (isExempt) {
+  if (isOriginCheckExempt(req.path)) {
     return next();
   }
 

@@ -272,3 +272,72 @@ describe('originCheckMiddleware', () => {
     expect(res.status).toHaveBeenCalledWith(403);
   });
 });
+
+describe('trust-access exemption scope', () => {
+  // The exemption exists for the public portal routes. The admin routes sit
+  // under the same prefix but are session-authenticated mutations, so a prefix
+  // match was handing them the exemption too.
+  it('exempts the public portal routes, as intended', async () => {
+    const req = createMockReq(
+      'POST',
+      '/v1/trust-access/acme/requests',
+      'https://trust.acme.com',
+    );
+    const res = createMockRes();
+    const next: NextFunction = jest.fn();
+
+    originCheckMiddleware(req as Request, res as Response, next);
+    await flushPromises();
+
+    expect(next).toHaveBeenCalled();
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
+  it('SECURITY: does not exempt the admin mutations under the same prefix', async () => {
+    const req = createMockReq(
+      'POST',
+      '/v1/trust-access/admin/requests/req_1/approve',
+      'https://evil.example',
+    );
+    const res = createMockRes();
+    const next: NextFunction = jest.fn();
+
+    originCheckMiddleware(req as Request, res as Response, next);
+    await flushPromises();
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(403);
+  });
+
+  it('still lets the app itself perform those admin mutations', async () => {
+    const req = createMockReq(
+      'POST',
+      '/v1/trust-access/admin/requests/req_1/approve',
+      'https://app.trycomp.ai',
+    );
+    const res = createMockRes();
+    const next: NextFunction = jest.fn();
+
+    originCheckMiddleware(req as Request, res as Response, next);
+    await flushPromises();
+
+    expect(next).toHaveBeenCalled();
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
+  it('still lets a non-browser caller through (API key, service token)', async () => {
+    // No Origin header at all — authenticated by HybridAuthGuard, not cookies.
+    const req = createMockReq(
+      'POST',
+      '/v1/trust-access/admin/requests/req_1/approve',
+    );
+    const res = createMockRes();
+    const next: NextFunction = jest.fn();
+
+    originCheckMiddleware(req as Request, res as Response, next);
+    await flushPromises();
+
+    expect(next).toHaveBeenCalled();
+    expect(res.status).not.toHaveBeenCalled();
+  });
+});
