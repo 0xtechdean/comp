@@ -497,10 +497,21 @@ export class TaskIntegrationsController {
         }
       }
 
+      // Record WHEN the control was last verified as operating. TasksService
+      // sets this on the manual paths; this automated one did not, so a task
+      // could be marked `done` by a passing check with no dated evidence that
+      // the check ever ran. Written on every passing run rather than only on a
+      // transition: a control that has sat `done` for months would otherwise
+      // carry no in-period evidence, which is exactly what a SOC 2 Type 2
+      // sample asks for. Never set on a move away from `done`.
+      const completionData =
+        newStatus === 'done' ? { lastCompletedAt: new Date() } : {};
+
       await db.task.update({
         where: { id: taskId },
         data: {
           status: newStatus,
+          ...completionData,
           ...(reviewDate ? { reviewDate } : {}),
         },
       });

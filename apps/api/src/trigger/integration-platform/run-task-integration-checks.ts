@@ -501,15 +501,21 @@ export const runTaskIntegrationChecks = task({
           );
         }
       } else if (newStatus === 'done') {
-        // Only update to done if not already done
+        // Read the current row to distinguish a real transition from a control
+        // that was already passing — both are written, but only a transition
+        // moves the review date.
         const currentTask = await db.task.findUnique({
           where: { id: taskId },
           select: { status: true, frequency: true },
         });
-        if (currentTask && currentTask.status !== 'done') {
-          // Calculate next review date based on frequency
+        if (currentTask) {
+          const isTransitioningToDone = currentTask.status !== 'done';
+
+          // Only advance the review date on an actual transition, so a control
+          // that passes every day does not keep pushing its own next review out
+          // of the audit window.
           let reviewDate: Date | undefined;
-          if (currentTask.frequency) {
+          if (isTransitioningToDone && currentTask.frequency) {
             reviewDate = new Date();
             switch (currentTask.frequency) {
               case 'monthly':
@@ -524,15 +530,23 @@ export const runTaskIntegrationChecks = task({
             }
           }
 
+          // Record WHEN the control was last verified as operating, on every
+          // passing run and not only on a transition — a task that has sat
+          // `done` for months would otherwise carry no dated evidence that the
+          // check is still being exercised. See the matching comment in
+          // TaskIntegrationsController.
           await db.task.update({
             where: { id: taskId },
             data: {
               status: 'done',
+              lastCompletedAt: new Date(),
               ...(reviewDate ? { reviewDate } : {}),
             },
           });
           logger.info(
-            `Task ${taskId} marked as done - all ${totalPassing} checks passed${reviewDate ? `, next review: ${reviewDate.toISOString()}` : ''}`,
+            isTransitioningToDone
+              ? `Task ${taskId} marked as done - all ${totalPassing} checks passed${reviewDate ? `, next review: ${reviewDate.toISOString()}` : ''}`
+              : `Task ${taskId} still passing - all ${totalPassing} checks passed; recorded completion date`,
           );
         }
       }
