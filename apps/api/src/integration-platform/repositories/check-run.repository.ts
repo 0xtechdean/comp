@@ -267,6 +267,39 @@ export class CheckRunRepository {
   }
 
   /**
+   * WHEN each (connection, check) last ran for a task — INCLUDING runs held as
+   * `inconclusive`. Timestamps only: no status, no counts, no results, so held
+   * outcomes stay hidden.
+   *
+   * `findLatestPerConnectionAndCheckByTask` above excludes held runs, which is
+   * right for RESULTS — but using that list for the "Last ran" label froze the
+   * label at the last visible run while a scheduled check kept running (and
+   * being held) every day. Customers read that as "the schedule stopped"
+   * (CS-753). This gives the UI the true last-attempt time per group.
+   */
+  async findLastAttemptPerConnectionAndCheckByTask(taskId: string) {
+    const groups = await db.integrationCheckRun.groupBy({
+      by: ['connectionId', 'checkId'],
+      where: {
+        taskId,
+        connection: { status: { not: 'disconnected' } },
+      },
+      _max: { createdAt: true },
+    });
+    return groups.flatMap((g) =>
+      g._max.createdAt
+        ? [
+            {
+              connectionId: g.connectionId,
+              checkId: g.checkId,
+              lastAttemptAt: g._max.createdAt,
+            },
+          ]
+        : [],
+    );
+  }
+
+  /**
    * Count a run's FAILING results whose resourceId is under an active exception.
    * Lets the task UI compute the effective (non-excepted) failure count exactly
    * WITHOUT loading every result row — only the bounded display sample is
@@ -299,6 +332,53 @@ export class CheckRunRepository {
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  /**
+   * Full results of a (connection, check)'s most recent REAL run, scoped to an
+   * org. "Real" = never `inconclusive`/held, never a disconnected connection.
+   *
+   * This is the generic read behind {@link CheckResultsService} — any feature
+   * reusing check results goes through that service, not this method directly.
+   * Unlike the task-run-history read there is NO `take` cap: a consumer that
+   * maps every resource (e.g. one member per user row) needs the full set, so
+   * the 30-row display sample ({@link DISPLAY_RESULTS_PER_RUN}) is deliberately
+   * not reused here. Pass `resourceType` to load only rows of that kind (e.g.
+   * `'user'`); omit it to load all. Returns null when there is no real run.
+   */
+  async findLatestResultsByConnectionAndCheck({
+    connectionId,
+    checkId,
+    organizationId,
+    resourceType,
+  }: {
+    connectionId: string;
+    checkId: string;
+    organizationId: string;
+    resourceType?: string;
+  }) {
+    const run = await db.integrationCheckRun.findFirst({
+      where: {
+        connectionId,
+        checkId,
+        status: { not: 'inconclusive' },
+        connection: { organizationId, status: { not: 'disconnected' } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!run) return null;
+
+    const results = await db.integrationCheckResult.findMany({
+      where: {
+        checkRunId: run.id,
+        ...(resourceType ? { resourceType } : {}),
+      },
+      // Deterministic order — without it Postgres may return the same run's
+      // rows in a different order per query, which breaks consumers that key
+      // UI state off row identity/position.
+      orderBy: { id: 'asc' },
+    });
+    return { run, results };
   }
 
   /**

@@ -5,14 +5,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { db, Frequency, PolicyStatus, Prisma } from '@db';
-import {
-  HeadObjectCommand,
-  PutObjectCommand,
-} from '@aws-sdk/client-s3';
+import { HeadObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { AttachmentsService } from '../attachments/attachments.service';
 import { PolicyPdfRendererService } from '../trust-portal/policy-pdf-renderer.service';
 import { filterComplianceMembers } from '../utils/compliance-filters';
+import { isMemberOrgParticipant } from '../utils/org-participation';
 import { BUCKET_NAME, getSignedUrl, s3Client } from '../app/s3';
 import type { CreatePolicyDto } from './dto/create-policy.dto';
 import type { UpdatePolicyDto } from './dto/update-policy.dto';
@@ -99,9 +97,7 @@ export class PoliciesService {
           name: true,
           description: true,
           status: true,
-          ...(excludeContent
-            ? {}
-            : { content: true, draftContent: true }),
+          ...(excludeContent ? {} : { content: true, draftContent: true }),
           frequency: true,
           department: true,
           isRequiredToSign: true,
@@ -215,7 +211,10 @@ export class PoliciesService {
       organizationId,
       timelinesService: this.timelinesService,
     }).catch((err) => {
-      this.logger.warn('timeline auto-complete check failed after publish-all', err);
+      this.logger.warn(
+        'timeline auto-complete check failed after publish-all',
+        err,
+      );
     });
 
     return {
@@ -301,7 +300,12 @@ export class PoliciesService {
           where: { id: createData.assigneeId, organizationId },
           include: { user: { select: { role: true } } },
         });
-        if (assignee?.user.role === 'admin') {
+        if (!assignee) {
+          throw new BadRequestException(
+            'Assignee is not a member of this organization',
+          );
+        }
+        if (!(await isMemberOrgParticipant(assignee.user.role, organizationId))) {
           throw new BadRequestException(
             'Cannot assign a platform admin as assignee',
           );
@@ -406,6 +410,16 @@ export class PoliciesService {
 
       if (contentValue) {
         updatePayload.content = contentValue;
+        // Keep the working draft in lockstep with the live content. Callers of
+        // this endpoint (MCP, API consumers) send a single content payload —
+        // leaving draftContent on the previous text both shows a phantom
+        // "unpublished changes" banner and makes the next publish
+        // (POST :id/versions/publish with no versionId, which snapshots
+        // draftContent) revert the content that was just written. An empty
+        // array carries no text, so it must never wipe the stored draft.
+        if (contentValue.length > 0) {
+          updatePayload.draftContent = contentValue;
+        }
       }
 
       // All reads and writes in one transaction to prevent concurrent publish bypass
@@ -757,9 +771,10 @@ export class PoliciesService {
       sourceVersion = requestedVersion;
     }
 
-    const contentForVersion = (sourceVersion
-      ? (sourceVersion.content as Prisma.InputJsonValue[])
-      : (policy.content as Prisma.InputJsonValue[])) ?? [];
+    const contentForVersion =
+      (sourceVersion
+        ? (sourceVersion.content as Prisma.InputJsonValue[])
+        : (policy.content as Prisma.InputJsonValue[])) ?? [];
     const sourcePdfUrl = sourceVersion?.pdfUrl ?? policy.pdfUrl;
 
     // S3 copy is done AFTER the transaction to prevent orphaned files on retry
@@ -844,53 +859,80 @@ export class PoliciesService {
     organizationId: string,
     dto: UpdateVersionContentDto,
   ) {
-    const version = await db.policyVersion.findUnique({
-      where: { id: versionId },
-      include: {
-        policy: {
-          select: {
-            id: true,
-            organizationId: true,
-            status: true,
-            currentVersionId: true,
-            pendingVersionId: true,
-          },
-        },
-      },
-    });
-
-    if (
-      !version ||
-      version.policy.id !== policyId ||
-      version.policy.organizationId !== organizationId
-    ) {
-      throw new NotFoundException('Version not found');
-    }
-
-    // Cannot edit the current version unless the policy is in draft status
-    // This covers both 'published' and 'needs_review' states
-    if (
-      version.id === version.policy.currentVersionId &&
-      version.policy.status !== 'draft'
-    ) {
-      throw new BadRequestException(
-        'Cannot edit the published version. Create a new version to make changes.',
-      );
-    }
-
-    if (version.id === version.policy.pendingVersionId) {
-      throw new BadRequestException(
-        'Cannot edit a version that is pending approval.',
-      );
-    }
-
     const processedContent = JSON.parse(
       JSON.stringify(dto.content ?? []),
     ) as Prisma.InputJsonValue[];
 
-    await db.policyVersion.update({
-      where: { id: versionId },
-      data: { content: processedContent },
+    await db.$transaction(async (tx) => {
+      // Lock the policy row, then read its state inside the transaction. Both
+      // the guards and the writes below key off status / currentVersionId, so a
+      // publish or promotion committing in between would let this edit land on
+      // a version that has since become the live one.
+      await tx.$executeRaw`SELECT id FROM "Policy" WHERE id = ${policyId} AND "organizationId" = ${organizationId} FOR UPDATE`;
+
+      const version = await tx.policyVersion.findUnique({
+        where: { id: versionId },
+        include: {
+          policy: {
+            select: {
+              id: true,
+              organizationId: true,
+              status: true,
+              currentVersionId: true,
+              pendingVersionId: true,
+            },
+          },
+        },
+      });
+
+      if (
+        !version ||
+        version.policy.id !== policyId ||
+        version.policy.organizationId !== organizationId
+      ) {
+        throw new NotFoundException('Version not found');
+      }
+
+      // Cannot edit the current version unless the policy is in draft status
+      // This covers both 'published' and 'needs_review' states
+      if (
+        version.id === version.policy.currentVersionId &&
+        version.policy.status !== 'draft'
+      ) {
+        throw new BadRequestException(
+          'Cannot edit the published version. Create a new version to make changes.',
+        );
+      }
+
+      if (version.id === version.policy.pendingVersionId) {
+        throw new BadRequestException(
+          'Cannot edit a version that is pending approval.',
+        );
+      }
+
+      await tx.policyVersion.update({
+        where: { id: versionId },
+        data: { content: processedContent },
+      });
+
+      // Mirror the edit onto the Policy row. draftContent is the working draft
+      // everywhere else — the "unpublished changes" banner compares it against
+      // content, and publishing without a versionId snapshots it — so leaving
+      // it on the previous text makes the next publish revert this edit.
+      // Policy.content only moves when the edited version IS the live one,
+      // which the guard above allows only while the policy is a draft. An empty
+      // payload carries no text, so it must never wipe the stored draft.
+      if (processedContent.length > 0) {
+        await tx.policy.update({
+          where: { id: policyId },
+          data: {
+            draftContent: processedContent,
+            ...(version.id === version.policy.currentVersionId && {
+              content: processedContent,
+            }),
+          },
+        });
+      }
     });
 
     return { versionId };
@@ -1012,11 +1054,10 @@ export class PoliciesService {
       }
 
       await db.$transaction(async (tx) => {
-        await tx.policyVersion.update({
-          where: { id: sourceVersion.id },
-          data: { publishedById: memberId },
-        });
-
+        // Policy row first, then the version row. Every path that writes both
+        // (updateById, updateVersionContent, acceptChanges) takes the locks in
+        // this order; taking them the other way round here deadlocks against a
+        // concurrent edit that already holds the policy lock.
         await tx.policy.update({
           where: { id: policyId },
           data: {
@@ -1036,6 +1077,11 @@ export class PoliciesService {
             // Clear signatures — employees must re-acknowledge new content
             signedBy: [],
           },
+        });
+
+        await tx.policyVersion.update({
+          where: { id: sourceVersion.id },
+          data: { publishedById: memberId },
         });
       });
 
@@ -1116,8 +1162,8 @@ export class PoliciesService {
           organizationId,
           timelinesService: this.timelinesService,
         }).catch((err) => {
-        this.logger.warn('timeline auto-complete check failed', err);
-      });
+          this.logger.warn('timeline auto-complete check failed', err);
+        });
 
         return result;
       } catch (error) {
@@ -1180,8 +1226,8 @@ export class PoliciesService {
       organizationId,
       timelinesService: this.timelinesService,
     }).catch((err) => {
-        this.logger.warn('timeline auto-complete check failed', err);
-      });
+      this.logger.warn('timeline auto-complete check failed', err);
+    });
 
     return {
       versionId: version.id,
@@ -1236,12 +1282,12 @@ export class PoliciesService {
       );
     }
 
-    // Cannot assign a platform admin as approver
+    // Cannot assign a platform admin as approver (unless this is an internal org)
     const approverUser = await db.user.findUnique({
       where: { id: approver.userId },
       select: { role: true },
     });
-    if (approverUser?.role === 'admin') {
+    if (!(await isMemberOrgParticipant(approverUser?.role, organizationId))) {
       throw new BadRequestException(
         'Cannot assign a platform admin as approver',
       );
@@ -1311,13 +1357,9 @@ export class PoliciesService {
     const memberId = await this.getMemberId(organizationId, userId);
 
     await db.$transaction(async (tx) => {
-      // Update the version with the publisher
-      await tx.policyVersion.update({
-        where: { id: version.id },
-        data: { publishedById: memberId },
-      });
-
-      // Publish the pending version
+      // Publish the pending version. Policy row first, then the version row —
+      // same lock order as every other path that writes both, so a concurrent
+      // version edit (which locks the policy first) cannot deadlock with this.
       await tx.policy.update({
         where: { id: policyId },
         data: {
@@ -1333,6 +1375,12 @@ export class PoliciesService {
           signedBy: [],
         },
       });
+
+      // Stamp the version with the publisher
+      await tx.policyVersion.update({
+        where: { id: version.id },
+        data: { publishedById: memberId },
+      });
     });
 
     // Check timeline auto-completion after accepting changes (policy published)
@@ -1340,8 +1388,8 @@ export class PoliciesService {
       organizationId,
       timelinesService: this.timelinesService,
     }).catch((err) => {
-        this.logger.warn('timeline auto-complete check failed', err);
-      });
+      this.logger.warn('timeline auto-complete check failed', err);
+    });
 
     // Publishing cleared signedBy[] above, so everyone with the compliance
     // obligation must (re-)acknowledge the new version. Surface that audience so
@@ -1491,10 +1539,7 @@ export class PoliciesService {
   /**
    * Download all published policies as a single PDF bundle (no watermark)
    */
-  async downloadAllPoliciesPdf(
-    organizationId: string,
-    policyIds?: string[],
-  ) {
+  async downloadAllPoliciesPdf(organizationId: string, policyIds?: string[]) {
     // Get organization info
     const organization = await db.organization.findUnique({
       where: { id: organizationId },
@@ -1511,9 +1556,7 @@ export class PoliciesService {
         organizationId,
         isArchived: false,
         archivedAt: null,
-        ...(policyIds && policyIds.length > 0
-          ? { id: { in: policyIds } }
-          : {}),
+        ...(policyIds && policyIds.length > 0 ? { id: { in: policyIds } } : {}),
       },
       select: {
         id: true,
@@ -1831,10 +1874,7 @@ export class PoliciesService {
         select: { id: true, version: true },
       });
       if (!version) throw new NotFoundException('Version not found');
-      if (
-        version.id === policy.currentVersionId &&
-        policy.status !== 'draft'
-      ) {
+      if (version.id === policy.currentVersionId && policy.status !== 'draft') {
         throw new BadRequestException(
           'Cannot upload PDF to the published version',
         );

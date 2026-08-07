@@ -12,6 +12,7 @@ import {
   PutObjectCommand,
 } from '@aws-sdk/client-s3';
 import { db } from '@db';
+import { extractComplianceBadges } from './cert-badge-mapper';
 import {
   DomainStatusResponseDto,
   DomainVerificationDto,
@@ -1475,6 +1476,24 @@ export class TrustPortalService {
     });
   }
 
+  async updateSecurityQuestionnaireEnabled(
+    organizationId: string,
+    enabled: boolean,
+  ) {
+    const trust = await db.trust.findUnique({
+      where: { organizationId },
+    });
+
+    if (!trust) {
+      throw new NotFoundException('Trust portal not found');
+    }
+
+    return db.trust.update({
+      where: { organizationId },
+      data: { securityQuestionnaireEnabled: enabled },
+    });
+  }
+
   async getOverview(organizationId: string) {
     const trust = await db.trust.findUnique({
       where: { organizationId },
@@ -1730,6 +1749,8 @@ export class TrustPortalService {
       overviewTitle: trust.overviewTitle ?? null,
       overviewContent: trust.overviewContent ?? defaultOverviewContent,
       showOverview: trust.showOverview ?? false,
+      // Security questionnaire visibility on the public portal
+      securityQuestionnaireEnabled: trust.securityQuestionnaireEnabled ?? true,
       // Favicon
       faviconUrl,
       // Organization data
@@ -1855,10 +1876,10 @@ export class TrustPortalService {
           });
 
           if (globalVendor?.riskAssessmentData) {
-            const extractedBadges = this.extractComplianceBadges(
+            const extractedBadges = extractComplianceBadges(
               globalVendor.riskAssessmentData,
             );
-            if (extractedBadges && extractedBadges.length > 0) {
+            if (extractedBadges.length > 0) {
               const currentBadges = vendor.complianceBadges as Array<{
                 type: string;
               }> | null;
@@ -1912,62 +1933,6 @@ export class TrustPortalService {
       logoUrl: v.logoUrl,
       complianceBadges: v.complianceBadges,
     }));
-  }
-
-  private extractComplianceBadges(
-    data: Prisma.JsonValue,
-  ): Array<{ type: string; verified: boolean }> | null {
-    try {
-      const parsed = data as {
-        certifications?: Array<{ type: string; status: string }>;
-      };
-
-      if (!parsed?.certifications || !Array.isArray(parsed.certifications)) {
-        return null;
-      }
-
-      const badges: Array<{ type: string; verified: boolean }> = [];
-      const seenTypes = new Set<string>();
-
-      for (const cert of parsed.certifications) {
-        if (cert.status !== 'verified') continue;
-
-        const badgeType = this.mapCertificationToBadgeType(cert.type);
-        if (badgeType && !seenTypes.has(badgeType)) {
-          seenTypes.add(badgeType);
-          badges.push({ type: badgeType, verified: true });
-        }
-      }
-
-      return badges.length > 0 ? badges : null;
-    } catch {
-      return null;
-    }
-  }
-
-  private mapCertificationToBadgeType(certType: string): string | null {
-    const normalized = certType.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-    if (normalized.includes('soc2') || normalized.includes('soc 2'))
-      return 'soc2';
-    if (normalized.includes('iso27001') || normalized.includes('iso 27001'))
-      return 'iso27001';
-    if (normalized.includes('iso42001') || normalized.includes('iso 42001'))
-      return 'iso42001';
-    if (normalized.includes('gdpr')) return 'gdpr';
-    if (normalized.includes('hipaa')) return 'hipaa';
-    if (
-      normalized.includes('pcidss') ||
-      normalized.includes('pci dss') ||
-      normalized.includes('pci_dss')
-    )
-      return 'pci_dss';
-    if (normalized.includes('nen7510') || normalized.includes('nen 7510'))
-      return 'nen7510';
-    if (normalized.includes('iso9001') || normalized.includes('iso 9001'))
-      return 'iso9001';
-
-    return null;
   }
 
   private generateLogoUrl(website: string | null): string | null {

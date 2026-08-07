@@ -1,7 +1,13 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiSchema } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 
+// A second class named `CreateVersionDto` exists in tasks/automations with a
+// different, REQUIRED shape (version! + scriptKey!). Without a distinct OpenAPI
+// component name the two collide, and the automations shape overwrites this
+// one — which broke the create-policy-version MCP tool (it demanded fields the
+// policies endpoint's ValidationPipe then rejected with 400). Keep this name.
+@ApiSchema({ name: 'CreatePolicyVersionDto' })
 export class CreateVersionDto {
   @ApiProperty({
     description: 'Optional version ID to base the new version on',
@@ -36,9 +42,13 @@ export class UpdateVersionContentDto {
     type: 'array',
     items: { type: 'object', additionalProperties: true },
   })
-  @Transform(({ value }) => value) // Preserve raw JSON, don't let class-transformer mangle it
   @IsArray()
-  @Transform(({ value }) => value)
+  // Return the raw source value. Under the global ValidationPipe's implicit
+  // conversion, class-transformer coerces each TipTap node toward the reflected
+  // Array design-type of `content`, mangling `[{...}, {...}]` into `[[], []]`.
+  // The transform runs after that coercion, so `value` is already mangled —
+  // `obj.content` is the untouched original. Do not revert this to `value`.
+  @Transform(({ obj }) => obj.content)
   content: unknown[];
 }
 

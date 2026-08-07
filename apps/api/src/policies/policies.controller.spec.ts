@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HybridAuthGuard } from '../auth/hybrid-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
-import type { AuthContext } from '../auth/types';
+import { ActingUserResolver } from '../auth/acting-user.service';
+import type { AuthContext, AuthenticatedRequest } from '../auth/types';
 import { PoliciesController } from './policies.controller';
 import { PoliciesService } from './policies.service';
 
@@ -98,6 +99,7 @@ jest.mock('ai', () => ({
 describe('PoliciesController', () => {
   let controller: PoliciesController;
   let policiesService: jest.Mocked<PoliciesService>;
+  let actingUser: jest.Mocked<ActingUserResolver>;
 
   const mockPoliciesService = {
     findAll: jest.fn(),
@@ -119,7 +121,33 @@ describe('PoliciesController', () => {
     denyChanges: jest.fn(),
   };
 
+  const mockActingUser = {
+    resolve: jest.fn(),
+  };
+
   const mockGuard = { canActivate: jest.fn().mockReturnValue(true) };
+
+  function sessionReq(): AuthenticatedRequest {
+    return {
+      userId: 'usr_123',
+      organizationId: 'org_123',
+      authType: 'session',
+      isApiKey: false,
+      isServiceToken: false,
+    } as unknown as AuthenticatedRequest;
+  }
+
+  function apiKeyReq(): AuthenticatedRequest {
+    return {
+      userId: undefined,
+      organizationId: 'org_123',
+      authType: 'api-key',
+      isApiKey: true,
+      isServiceToken: false,
+      apiKeyId: 'apk_1',
+      apiKeyName: 'CI Pipeline',
+    } as unknown as AuthenticatedRequest;
+  }
 
   const mockAuthContext: AuthContext = {
     organizationId: 'org_123',
@@ -136,7 +164,10 @@ describe('PoliciesController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [PoliciesController],
-      providers: [{ provide: PoliciesService, useValue: mockPoliciesService }],
+      providers: [
+        { provide: PoliciesService, useValue: mockPoliciesService },
+        { provide: ActingUserResolver, useValue: mockActingUser },
+      ],
     })
       .overrideGuard(HybridAuthGuard)
       .useValue(mockGuard)
@@ -146,6 +177,7 @@ describe('PoliciesController', () => {
 
     controller = module.get<PoliciesController>(PoliciesController);
     policiesService = module.get(PoliciesService);
+    actingUser = module.get(ActingUserResolver) as jest.Mocked<ActingUserResolver>;
 
     jest.clearAllMocks();
   });
@@ -224,13 +256,18 @@ describe('PoliciesController', () => {
   });
 
   describe('publishAllPolicies', () => {
-    it('should call policiesService.publishAll with correct params', async () => {
+    it('should call policiesService.publishAll with the resolved acting user', async () => {
       const mockResult = { count: 3 };
       mockPoliciesService.publishAll.mockResolvedValue(mockResult);
+      actingUser.resolve.mockResolvedValueOnce({
+        userId: 'usr_123',
+        source: 'session',
+      });
 
       const result = await controller.publishAllPolicies(
         orgId,
         mockAuthContext,
+        sessionReq(),
       );
 
       expect(policiesService.publishAll).toHaveBeenCalledWith(
@@ -243,6 +280,40 @@ describe('PoliciesController', () => {
         authType: 'session',
         authenticatedUser: { id: 'usr_123', email: 'test@example.com' },
       });
+    });
+
+    it('attributes bulk publish to the resolved user/member for API-key callers', async () => {
+      // Regression: API-key callers have no authContext.userId, so the
+      // per-policy audit rows used to be dropped. The controller must resolve
+      // the acting user (key creator / org owner) and pass it to the service.
+      const mockResult = { count: 2 };
+      mockPoliciesService.publishAll.mockResolvedValue(mockResult);
+      actingUser.resolve.mockResolvedValueOnce({
+        userId: 'usr_owner',
+        memberId: 'mem_owner',
+        source: 'org-owner-fallback',
+        callerLabel: 'via API key "CI Pipeline"',
+      });
+
+      const apiKeyAuthContext: AuthContext = {
+        ...mockAuthContext,
+        userId: undefined,
+        userEmail: undefined,
+        authType: 'api-key',
+        isApiKey: true,
+      };
+
+      await controller.publishAllPolicies(orgId, apiKeyAuthContext, apiKeyReq());
+
+      expect(actingUser.resolve).toHaveBeenCalledWith(
+        expect.objectContaining({ isApiKey: true }),
+        orgId,
+      );
+      expect(policiesService.publishAll).toHaveBeenCalledWith(
+        orgId,
+        'usr_owner',
+        'mem_owner',
+      );
     });
   });
 
@@ -642,14 +713,17 @@ describe('PoliciesController', () => {
   });
 
   describe('removePolicyControl', () => {
-    it('should disconnect control from policy and return success', async () => {
+    it('disconnects the control and severs framework join rows even with NO implicit m2m link (CS-780 join-only case)', async () => {
+      // A framework-scoped link (LinkPolicySheet on a framework control page) creates
+      // ONLY a FrameworkControlPolicyLink — no implicit m2m row. Unlinking must still
+      // sever the join row, or the policy keeps showing against the control. The delete
+      // must fire unconditionally (not gated on an m2m link existing).
       const { db } = require('@db');
-      db.policy.findUnique.mockResolvedValue({ controls: [] });
       db.policy.update.mockResolvedValue({});
+      db.frameworkControlPolicyLink.deleteMany.mockResolvedValue({ count: 1 });
       db.$transaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) =>
         callback({
           policy: {
-            findUnique: db.policy.findUnique,
             update: db.policy.update,
           },
           frameworkControlPolicyLink: {
@@ -673,7 +747,53 @@ describe('PoliciesController', () => {
           },
         },
       });
+      expect(db.frameworkControlPolicyLink.deleteMany).toHaveBeenCalledWith({
+        where: {
+          controlId: 'ctrl_1',
+          policyId: 'pol_1',
+          frameworkInstance: { organizationId: orgId },
+        },
+      });
       expect(result.success).toBe(true);
+    });
+
+    it('deletes framework links for ALL framework instances (platform + custom), not just custom (CS-780)', async () => {
+      // Regression: the control<->policy join row on a PLATFORM framework
+      // instance lives in FrameworkControlPolicyLink, which the platform
+      // framework/control detail pages read directly. Restricting the delete to
+      // custom frameworks (customFrameworkId: { not: null }) left the policy
+      // still showing against the control after it was unlinked.
+      const { db } = require('@db');
+      db.policy.findUnique.mockResolvedValue({ controls: [{ id: 'ctrl_1' }] });
+      db.policy.update.mockResolvedValue({});
+      db.frameworkControlPolicyLink.deleteMany.mockResolvedValue({ count: 1 });
+      db.$transaction.mockImplementation(
+        async (callback: (tx: unknown) => Promise<unknown>) =>
+          callback({
+            policy: {
+              findUnique: db.policy.findUnique,
+              update: db.policy.update,
+            },
+            frameworkControlPolicyLink: {
+              deleteMany: db.frameworkControlPolicyLink.deleteMany,
+            },
+          }),
+      );
+
+      await controller.removePolicyControl(
+        'pol_1',
+        'ctrl_1',
+        orgId,
+        mockAuthContext,
+      );
+
+      expect(db.frameworkControlPolicyLink.deleteMany).toHaveBeenCalledWith({
+        where: {
+          controlId: 'ctrl_1',
+          policyId: 'pol_1',
+          frameworkInstance: { organizationId: orgId },
+        },
+      });
     });
   });
 

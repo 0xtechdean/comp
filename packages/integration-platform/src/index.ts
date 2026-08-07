@@ -72,6 +72,7 @@ export {
   getIntegrationIds,
   getManifest,
   getOAuthConfig,
+  isCodeManifest,
   registry,
   requiresOAuth,
 } from './registry';
@@ -133,7 +134,7 @@ export type {
 
 // Individual manifests (for direct import if needed)
 export { manifest as githubManifest } from './manifests/github';
-export { manifest as githubAppManifest } from './manifests/github-app';
+export { githubAppManifest } from './manifests/github-app';
 
 // Directory sync email include/exclude terms (Google Workspace, JumpCloud, checks)
 export { matchesSyncFilterTerms, parseSyncFilterTerms } from './sync-filter/email-exclusion-terms';

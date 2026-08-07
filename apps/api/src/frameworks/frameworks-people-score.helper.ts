@@ -1,8 +1,10 @@
 import { BackgroundCheckStatus, db } from '@db';
+import {
+  GENERAL_TRAINING_VIDEO_IDS as GENERAL_TRAINING_IDS,
+  HIPAA_TRAINING_ID,
+} from '@trycompai/company';
 import { filterComplianceMembers } from '../utils/compliance-filters';
 
-const GENERAL_TRAINING_IDS = ['sat-1', 'sat-2', 'sat-3', 'sat-4', 'sat-5'];
-const HIPAA_TRAINING_ID = 'hipaa-sat-1';
 const COMPLETED_BACKGROUND_CHECK_STATUSES = [
   BackgroundCheckStatus.completed,
   BackgroundCheckStatus.completed_with_flags,
@@ -158,6 +160,10 @@ async function getMembersWithInstalledDevices({
         where: {
           organizationId,
           memberId: { in: memberIds },
+          // Integration-imported devices are inventory records, not proof that
+          // the member installed the device agent — exclude them so they don't
+          // falsely satisfy the device-agent step in the people score.
+          source: { not: 'integration' },
         },
         select: { memberId: true },
         distinct: ['memberId'],

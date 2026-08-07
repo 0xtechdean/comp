@@ -69,8 +69,10 @@
               "introduction",
               "ai-policy-editor",
               "automated-evidence",
+              "browser-automations",
               "device-agent",
               "security-questionnaire",
+              "security-questionnaire-extension",
               "penetration-tests",
               "mcp-server",
               {

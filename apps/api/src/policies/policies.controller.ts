@@ -43,7 +43,11 @@ import { AuthContext, OrganizationId } from '../auth/auth-context.decorator';
 import { HybridAuthGuard } from '../auth/hybrid-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequirePermission, RequirePermissions } from '../auth/require-permission.decorator';
-import type { AuthContext as AuthContextType } from '../auth/types';
+import { ActingUserResolver } from '../auth/acting-user.service';
+import type {
+  AuthContext as AuthContextType,
+  AuthenticatedRequest,
+} from '../auth/types';
 import { CreatePolicyDto } from './dto/create-policy.dto';
 import { UpdatePolicyDto } from './dto/update-policy.dto';
 import { AISuggestPolicyRequestDto } from './dto/ai-suggest-policy.dto';
@@ -110,7 +114,10 @@ function parsePolicyIdsParam(
   required: false,
 })
 export class PoliciesController {
-  constructor(private readonly policiesService: PoliciesService) {}
+  constructor(
+    private readonly policiesService: PoliciesService,
+    private readonly actingUser: ActingUserResolver,
+  ) {}
 
   @Get()
   @RequirePermission('policy', 'read')
@@ -162,11 +169,17 @@ export class PoliciesController {
   async publishAllPolicies(
     @OrganizationId() organizationId: string,
     @AuthContext() authContext: AuthContextType,
+    @Req() req: AuthenticatedRequest,
   ) {
+    // Resolve the acting user so per-policy audit rows are attributed correctly.
+    // Session callers have authContext.userId; API-key / service-token callers
+    // resolve to the key creator (else org owner) — without this, the granular
+    // audit rows would be dropped for API-key auth (userId undefined).
+    const acting = await this.actingUser.resolve(req, organizationId);
     const data = await this.policiesService.publishAll(
       organizationId,
-      authContext.userId,
-      authContext.memberId,
+      acting.userId ?? undefined,
+      acting.memberId ?? undefined,
     );
 
     return {
@@ -994,28 +1007,26 @@ export class PoliciesController {
     @AuthContext() authContext: AuthContextType,
   ) {
     await db.$transaction(async (tx) => {
-      const before = await tx.policy.findUnique({
-        where: { id, organizationId },
-        select: {
-          controls: { where: { id: controlId }, select: { id: true } },
-        },
-      });
+      // Disconnect the implicit m2m link (used by custom-framework/direct policy
+      // lists). Scoped by { id, organizationId }, so a foreign or missing policy
+      // aborts the transaction here before anything is severed (tenant isolation).
       await tx.policy.update({
         where: { id, organizationId },
         data: { controls: { disconnect: { id: controlId } } },
       });
-      if (before?.controls.length) {
-        await tx.frameworkControlPolicyLink.deleteMany({
-          where: {
-            controlId,
-            policyId: id,
-            frameworkInstance: {
-              organizationId,
-              customFrameworkId: { not: null },
-            },
-          },
-        });
-      }
+      // ALWAYS sever the explicit control<->policy join rows on every framework
+      // instance (platform + custom), org-scoped. Framework-scoped links create
+      // ONLY a FrameworkControlPolicyLink (no implicit m2m), so gating this on the
+      // m2m link existing left those links un-severable — the policy kept showing
+      // against the control (the same CS-780 contradiction). deleteMany is
+      // idempotent (no match → 0 rows), so running it unconditionally is safe.
+      await tx.frameworkControlPolicyLink.deleteMany({
+        where: {
+          controlId,
+          policyId: id,
+          frameworkInstance: { organizationId },
+        },
+      });
     });
 
     return {

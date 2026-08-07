@@ -23,7 +23,7 @@ import { dependabotCheck } from '../github/checks/dependabot';
 import { sanitizedInputsCheck } from '../github/checks/sanitized-inputs';
 import { twoFactorAuthCheck } from '../github/checks/two-factor-auth';
 
-export const manifest: IntegrationManifest = {
+export const githubAppManifest: IntegrationManifest = {
   id: 'github-app',
   name: 'GitHub (App)',
   description:
@@ -121,4 +121,4 @@ export const manifest: IntegrationManifest = {
   isActive: true,
 };
 
-export default manifest;
+export default githubAppManifest;

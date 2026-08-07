@@ -71,6 +71,10 @@ vi.mock('./IsmsControlMappings', () => ({
   IsmsControlMappings: () => <div data-testid="isms-control-mappings" />,
 }));
 
+vi.mock('./IsmsVersionHistory', () => ({
+  IsmsVersionHistory: () => <div data-testid="isms-version-history" />,
+}));
+
 import { RequirementsClient } from './RequirementsClient';
 
 const REQUIREMENTS: IsmsInterestedPartyRequirement[] = [
@@ -109,8 +113,14 @@ function makeDocument(overrides: Partial<IsmsDocument> = {}): IsmsDocument {
     interestedParties: [],
     interestedPartyRequirements: REQUIREMENTS,
     objectives: [],
+    roles: [],
+    metrics: [],
+    audits: [],
+    reviews: [],
     controlLinks: [],
-    versions: [],
+    draftNarrative: null,
+    currentVersionId: null,
+    currentVersion: null,
     ...overrides,
   };
 }
@@ -141,6 +151,16 @@ describe('RequirementsClient', () => {
     // Derived rows are labelled "Auto-derived"; manual rows are "Manual".
     expect(screen.getAllByText('Auto-derived').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Manual').length).toBeGreaterThan(0);
+  });
+
+  it('back link returns to the ISO 27001 documents tab', () => {
+    setMockPermissions(ADMIN_PERMISSIONS);
+    render(<RequirementsClient {...baseProps} />);
+
+    expect(screen.getByRole('link', { name: 'ISMS' })).toHaveAttribute(
+      'href',
+      '/org-1/documents?tab=iso-27001',
+    );
   });
 
   it('allows editing (shows mutating controls) for a user with evidence:update', () => {

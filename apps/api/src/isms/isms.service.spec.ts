@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
-import { db } from '@db';
+import { db, Prisma } from '@db';
 import { IsmsService } from './isms.service';
+import type { IsmsVersionService } from './isms-version.service';
 
 jest.mock('@db', () => ({
   db: {
@@ -9,10 +10,15 @@ jest.mock('@db', () => ({
     ismsDocument: {
       findMany: jest.fn(),
       createMany: jest.fn(),
+      updateMany: jest.fn(),
     },
+    ismsMetric: { findMany: jest.fn() },
+    organization: { findUnique: jest.fn() },
     control: { findMany: jest.fn() },
     ismsDocumentControlLink: { createMany: jest.fn() },
   },
+  // The programme seed filters on the Prisma JSON-null sentinel.
+  Prisma: { AnyNull: Symbol.for('prisma.AnyNull') },
 }));
 jest.mock('./documents/data-source', () => ({
   collectPlatformData: jest.fn(),
@@ -20,11 +26,11 @@ jest.mock('./documents/data-source', () => ({
 jest.mock('./documents/generate', () => ({
   runDerivation: jest.fn(),
 }));
-jest.mock('./utils/version-snapshot', () => ({
-  upsertLatestSnapshotVersion: jest.fn(),
-}));
 
 const mockDb = jest.mocked(db);
+
+// ensureSetup never touches the version service; a bare stub satisfies the ctor.
+const versionService = {} as unknown as IsmsVersionService;
 
 /** Convenience accessor for the first createMany call's `data` array. */
 const createManyData = () =>
@@ -35,7 +41,7 @@ describe('IsmsService ensureSetup', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new IsmsService();
+    service = new IsmsService(versionService);
     (mockDb.control.findMany as jest.Mock).mockResolvedValue([]);
     (mockDb.ismsDocument.createMany as jest.Mock).mockResolvedValue({
       count: 0,
@@ -88,6 +94,214 @@ describe('IsmsService ensureSetup', () => {
         expect(mockDb.ismsDocument.findMany).toHaveBeenCalledTimes(1);
         expect(result.documents).toHaveLength(1);
       });
+
+      it('reports hasApprovedVersion from a published version OR an approved status', async () => {
+        (mockDb.frameworkEditorFramework.findUnique as jest.Mock).mockResolvedValue({
+          id: 'fw_1',
+          requirements: [],
+        });
+        (mockDb.ismsDocument.findMany as jest.Mock).mockResolvedValueOnce([
+          // Published version exists.
+          { id: 'd1', type: 'isms_scope', status: 'draft', requirementId: null, currentVersionId: 'isms_ver_1' },
+          // Approved before versioning existed: no version row, but still approved.
+          { id: 'd2', type: 'leadership_commitment', status: 'approved', requirementId: null, currentVersionId: null },
+          // Never approved.
+          { id: 'd3', type: 'objectives_plan', status: 'draft', requirementId: null, currentVersionId: null },
+        ]);
+
+        const result = await service.ensureSetup({ ...dto, canWrite: false });
+
+        expect(result.documents.map((d) => d.hasApprovedVersion)).toEqual([
+          true,
+          true,
+          false,
+        ]);
+      });
+    });
+
+    it('seeds the programme on a new Internal Audit doc atomically — only while the narrative is still NULL (CS-724)', async () => {
+      (
+        mockDb.frameworkEditorFramework.findUnique as jest.Mock
+      ).mockResolvedValue({ id: 'fw_1', requirements: [] });
+      mockTemplates.mockResolvedValue([]);
+      (mockDb.organization.findUnique as jest.Mock).mockResolvedValue({
+        name: 'Acme Corp',
+      });
+      (mockDb.ismsDocument.findMany as jest.Mock)
+        .mockResolvedValueOnce([]) // existing-types probe
+        .mockResolvedValueOnce([{ id: 'doc_ia', type: 'internal_audit' }]) // created lookup
+        .mockResolvedValueOnce([
+          {
+            id: 'doc_ia',
+            type: 'internal_audit',
+            status: 'draft',
+            requirementId: null,
+            currentVersionId: null,
+            draftNarrative: null,
+          },
+        ]); // final list — the seed now works off this, not the created lookup
+
+      await service.ensureSetup(dto);
+
+      // The empty-narrative filter (NULL or {}, generateNarrative's definition)
+      // is the concurrency guard: a narrative written between provisioning and
+      // this seed (concurrent setup call or an early customer edit) makes the
+      // update match zero rows instead of overwriting.
+      expect(mockDb.ismsDocument.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'doc_ia',
+          OR: [
+            { draftNarrative: { equals: Prisma.AnyNull } },
+            { draftNarrative: { equals: {} } },
+          ],
+        },
+        data: {
+          draftNarrative: {
+            programme: expect.stringContaining(
+              'Acme Corp runs an annual internal audit',
+            ),
+          },
+        },
+      });
+    });
+
+    it('heals a PRE-EXISTING Management Review doc whose procedure is still empty', async () => {
+      (
+        mockDb.frameworkEditorFramework.findUnique as jest.Mock
+      ).mockResolvedValue({ id: 'fw_1', requirements: [] });
+      mockTemplates.mockResolvedValue([]);
+      (mockDb.organization.findUnique as jest.Mock).mockResolvedValue({
+        name: 'Acme Corp',
+      });
+      (mockDb.ismsDocument.findMany as jest.Mock)
+        // Every type already exists, so provisioning creates nothing and the
+        // old created-scoped seed would never have run.
+        .mockResolvedValueOnce([
+          { type: 'context_of_organization' },
+          { type: 'interested_parties_register' },
+          { type: 'interested_parties_requirements' },
+          { type: 'isms_scope' },
+          { type: 'leadership_commitment' },
+          { type: 'roles_and_responsibilities' },
+          { type: 'objectives_plan' },
+          { type: 'monitoring' },
+          { type: 'internal_audit' },
+          { type: 'management_review' },
+          { type: 'risk_assessment_methodology' },
+          { type: 'risk_treatment_plan' },
+        ])
+        .mockResolvedValueOnce([
+          {
+            id: 'doc_mr',
+            type: 'management_review',
+            status: 'draft',
+            requirementId: null,
+            currentVersionId: null,
+            draftNarrative: {}, // blank — e.g. a crash between provision and seed
+          },
+          {
+            id: 'doc_ia',
+            type: 'internal_audit',
+            status: 'draft',
+            requirementId: null,
+            currentVersionId: null,
+            draftNarrative: { programme: 'Customer-edited programme.' },
+          },
+        ]); // final list
+
+      await service.ensureSetup(dto);
+
+      // Only the blank document is healed; the populated one is untouched.
+      expect(mockDb.ismsDocument.updateMany).toHaveBeenCalledTimes(1);
+      expect(mockDb.ismsDocument.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'doc_mr',
+          OR: [
+            { draftNarrative: { equals: Prisma.AnyNull } },
+            { draftNarrative: { equals: {} } },
+          ],
+        },
+        data: {
+          draftNarrative: {
+            procedure: expect.stringContaining(
+              'Acme Corp holds a management review',
+            ),
+          },
+        },
+      });
+    });
+
+    it('reports overdueMetricCount on the monitoring document row (CS-723)', async () => {
+      const { addPeriods, periodStartFor } = jest.requireActual<
+        typeof import('./utils/metric-periods')
+      >('./utils/metric-periods');
+      const current = periodStartFor('monthly', new Date());
+
+      (
+        mockDb.frameworkEditorFramework.findUnique as jest.Mock
+      ).mockResolvedValue({ id: 'fw_1', requirements: [] });
+      (mockDb.ismsDocument.findMany as jest.Mock).mockResolvedValueOnce([
+        {
+          id: 'doc_mon',
+          type: 'monitoring',
+          status: 'draft',
+          requirementId: null,
+          currentVersionId: null,
+        },
+        {
+          id: 'doc_ctx',
+          type: 'context_of_organization',
+          status: 'draft',
+          requirementId: null,
+          currentVersionId: null,
+        },
+      ]);
+      (mockDb.ismsMetric.findMany as jest.Mock).mockResolvedValue([
+        {
+          // Latest measurement three periods back → overdue.
+          cadence: 'monthly',
+          createdAt: new Date(`${addPeriods('monthly', current, -6)}T00:00:00Z`),
+          measurements: [
+            {
+              periodStart: new Date(
+                `${addPeriods('monthly', current, -3)}T00:00:00Z`,
+              ),
+            },
+          ],
+        },
+        {
+          // Previous period recorded → within cadence.
+          cadence: 'monthly',
+          createdAt: new Date(`${addPeriods('monthly', current, -6)}T00:00:00Z`),
+          measurements: [
+            {
+              periodStart: new Date(
+                `${addPeriods('monthly', current, -1)}T00:00:00Z`,
+              ),
+            },
+          ],
+        },
+      ]);
+
+      const result = await service.ensureSetup({ ...dto, canWrite: false });
+
+      const monitoringRow = result.documents.find(
+        (doc) => doc.type === 'monitoring',
+      );
+      const contextRow = result.documents.find(
+        (doc) => doc.type === 'context_of_organization',
+      );
+      expect(monitoringRow).toMatchObject({ overdueMetricCount: 1 });
+      expect(contextRow).not.toHaveProperty('overdueMetricCount');
+      expect(mockDb.ismsMetric.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            documentId: 'doc_mon',
+            isActive: true,
+            cadence: { not: null },
+          },
+        }),
+      );
     });
 
     describe('template-driven (templates seeded)', () => {
@@ -103,7 +317,7 @@ describe('IsmsService ensureSetup', () => {
         });
       });
 
-      it('creates docs from templates with templateId set', async () => {
+      it('creates docs from templates with templateId set, plus definition fallbacks for untemplated types', async () => {
         mockTemplates.mockResolvedValue([
           {
             id: 'tpl_ctx',
@@ -122,13 +336,19 @@ describe('IsmsService ensureSetup', () => {
         await service.ensureSetup(dto);
 
         expect(mockDb.ismsDocument.createMany).toHaveBeenCalledTimes(1);
-        expect(createManyData()).toHaveLength(1);
+        // 1 template-driven + 11 definition fallbacks: a type shipped before its
+        // template seed re-runs (e.g. monitoring, CS-723) still provisions.
+        expect(createManyData()).toHaveLength(12);
         expect(createManyData()[0]).toMatchObject({
           type: 'context_of_organization',
           title: 'Context of the Organization',
           templateId: 'tpl_ctx',
           requirementId: 'req_41', // resolved via clause fallback "4.1"
         });
+        const monitoring = createManyData().find(
+          (doc: { type: string }) => doc.type === 'monitoring',
+        );
+        expect(monitoring).toMatchObject({ templateId: null });
       });
 
       it('prefers an explicit framework requirement link over clause match', async () => {
@@ -202,8 +422,13 @@ describe('IsmsService ensureSetup', () => {
 
         await service.ensureSetup(dto);
 
-        expect(createManyData()).toHaveLength(1);
+        // objectives (template) + 10 definition fallbacks; the existing
+        // context_of_organization is skipped.
+        expect(createManyData()).toHaveLength(11);
         expect(createManyData()[0].type).toBe('objectives_plan');
+        expect(
+          createManyData().map((doc: { type: string }) => doc.type),
+        ).not.toContain('context_of_organization');
       });
 
       it('auto-derives org control links from the template control links', async () => {
@@ -286,10 +511,23 @@ describe('IsmsService ensureSetup', () => {
             controlLinks: [{ controlTemplateId: 'ct_1' }],
           },
         ]);
-        // Document already exists, so no create and no control derivation runs;
-        // any manual control links the org added are left untouched.
+        // Every type already exists, so no create and no control derivation
+        // runs; any manual control links the org added are left untouched.
         (mockDb.ismsDocument.findMany as jest.Mock)
-          .mockResolvedValueOnce([{ type: 'context_of_organization' }])
+          .mockResolvedValueOnce([
+            { type: 'context_of_organization' },
+            { type: 'interested_parties_register' },
+            { type: 'interested_parties_requirements' },
+            { type: 'isms_scope' },
+            { type: 'leadership_commitment' },
+            { type: 'roles_and_responsibilities' },
+            { type: 'objectives_plan' },
+            { type: 'monitoring' },
+            { type: 'internal_audit' },
+            { type: 'management_review' },
+            { type: 'risk_assessment_methodology' },
+            { type: 'risk_treatment_plan' },
+          ])
           .mockResolvedValueOnce([]);
 
         await service.ensureSetup(dto);
