@@ -1,9 +1,11 @@
 import { corsOriginMiddleware } from './cors-origin.middleware';
-import { isTrustedOrigin } from './auth.server';
+import { isTrustedOriginForRequest } from './trusted-origins';
 import { isStaticTrustedOrigin } from './origin-policy';
 import type { NextFunction, Request, Response } from 'express';
 
-jest.mock('./auth.server', () => ({ isTrustedOrigin: jest.fn() }));
+jest.mock('./trusted-origins', () => ({
+  isTrustedOriginForRequest: jest.fn(),
+}));
 
 /**
  * The four classes of origin that reach the production API. The CORS layer was
@@ -14,7 +16,8 @@ const APP = 'https://app.trycomp.ai';
 const PORTAL = 'https://portal.trycomp.ai';
 const SUBDOMAIN = 'https://anything.trycomp.ai';
 // A customer's own trust-portal domain: not a trycomp.ai host, so it is only
-// ever allowed by the Redis/DB-backed lookup inside isTrustedOrigin.
+// ever allowed by the Redis/DB-backed lookup — and, since CORS was scoped per
+// organization, only for that portal's own routes.
 const CUSTOM_DOMAIN = 'https://trust.example.com';
 
 function createRequest(origin: string): Partial<Request> {
@@ -42,9 +45,8 @@ describe('production origins still pass CORS', () => {
     ['the app', APP],
     ['the portal', PORTAL],
     ['an arbitrary trycomp.ai subdomain', SUBDOMAIN],
-    ['a customer custom domain', CUSTOM_DOMAIN],
   ])('allows %s', async (_label, origin) => {
-    jest.mocked(isTrustedOrigin).mockResolvedValue(true);
+    jest.mocked(isTrustedOriginForRequest).mockResolvedValue(true);
     const response = createResponse();
     const next: NextFunction = jest.fn();
 
@@ -60,8 +62,49 @@ describe('production origins still pass CORS', () => {
     expect(next).toHaveBeenCalled();
   });
 
+  it('allows a customer custom domain on its own portal routes', async () => {
+    jest.mocked(isTrustedOriginForRequest).mockResolvedValue(true);
+    const response = createResponse();
+    const next: NextFunction = jest.fn();
+
+    corsOriginMiddleware(
+      {
+        method: 'GET',
+        path: '/v1/trust-access/example/faqs',
+        headers: { origin: CUSTOM_DOMAIN },
+      } as Request,
+      response as Response,
+      next,
+    );
+    await flushPromises();
+
+    expect(response.headers['Access-Control-Allow-Origin']).toBe(CUSTOM_DOMAIN);
+    expect(response.headers['Access-Control-Allow-Credentials']).toBe('true');
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('SECURITY: does not reflect a custom domain on the rest of the API', async () => {
+    // Being a published portal used to admit the origin everywhere. The
+    // decision now depends on the path, which is why the middleware passes one.
+    jest.mocked(isTrustedOriginForRequest).mockResolvedValue(false);
+    const response = createResponse();
+    const next: NextFunction = jest.fn();
+
+    corsOriginMiddleware(
+      createRequest(CUSTOM_DOMAIN) as Request,
+      response as Response,
+      next,
+    );
+    await flushPromises();
+
+    expect(response.headers['Access-Control-Allow-Origin']).toBeUndefined();
+    expect(jest.mocked(isTrustedOriginForRequest)).toHaveBeenCalledWith(
+      expect.objectContaining({ path: '/v1/controls' }),
+    );
+  });
+
   it('rejects an untrusted origin', async () => {
-    jest.mocked(isTrustedOrigin).mockResolvedValue(false);
+    jest.mocked(isTrustedOriginForRequest).mockResolvedValue(false);
     const response = createResponse();
     const next: NextFunction = jest.fn();
 

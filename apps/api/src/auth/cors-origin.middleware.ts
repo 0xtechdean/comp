@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import { isTrustedOrigin } from './auth.server';
+import { isTrustedOriginForRequest } from './trusted-origins';
 import { isCompExtensionOriginAllowedForRequest } from './origin-policy';
 
 // Mirrors the previous `app.enableCors` default set, plus OPTIONS. HEAD must
@@ -50,7 +50,7 @@ async function isCorsOriginAllowed(params: {
   path: string;
 }): Promise<boolean> {
   if (isCompExtensionOriginAllowedForRequest(params)) return true;
-  return isTrustedOrigin(params.origin);
+  return isTrustedOriginForRequest(params);
 }
 
 function endPreflight(response: Response): void {

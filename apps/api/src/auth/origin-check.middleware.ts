@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import { isTrustedOrigin } from './auth.server';
+import { isTrustedOriginForRequest } from './trusted-origins';
 import {
   isChromeExtensionOrigin,
   isCompExtensionOrigin,
@@ -79,8 +79,9 @@ export function originCheckMiddleware(
     return next();
   }
 
-  // Validate Origin against trusted origins (includes dynamic subdomains + custom domains)
-  isTrustedOrigin(origin)
+  // Validate Origin against trusted origins (includes dynamic subdomains and
+  // custom trust-portal domains, the latter scoped to their own portal routes).
+  isTrustedOriginForRequest({ method: req.method, origin, path: req.path })
     .then((trusted) => {
       if (trusted) {
         return next();

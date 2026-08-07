@@ -1,9 +1,10 @@
 import { originCheckMiddleware } from './origin-check.middleware';
 import type { NextFunction, Request, Response } from 'express';
 
-// Mock isTrustedOrigin (async version)
-jest.mock('./auth.server', () => ({
-  isTrustedOrigin: async (origin: string) => {
+// The middleware asks trusted-origins, not the auth server — mocking the latter
+// silently stopped applying and let the real DB lookup run.
+jest.mock('./trusted-origins', () => ({
+  isTrustedOriginForRequest: async ({ origin }: { origin: string }) => {
     const staticOrigins = [
       'http://localhost:3000',
       'http://localhost:3002',

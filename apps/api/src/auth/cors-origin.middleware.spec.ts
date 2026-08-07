@@ -1,9 +1,10 @@
 import type { NextFunction, Request, Response } from 'express';
-import { isTrustedOrigin } from './auth.server';
+import { isTrustedOriginForRequest } from './trusted-origins';
 import { corsOriginMiddleware } from './cors-origin.middleware';
 
-jest.mock('./auth.server', () => ({
-  isTrustedOrigin: jest.fn(),
+// The middleware asks trusted-origins, not the auth server.
+jest.mock('./trusted-origins', () => ({
+  isTrustedOriginForRequest: jest.fn(),
 }));
 
 type MockResponse = Partial<Response> & {
@@ -83,7 +84,7 @@ describe('corsOriginMiddleware', () => {
 
   beforeEach(() => {
     process.env.COMP_EXTENSION_TRUSTED_ORIGINS = extensionOrigin;
-    jest.mocked(isTrustedOrigin).mockResolvedValue(false);
+    jest.mocked(isTrustedOriginForRequest).mockResolvedValue(false);
   });
 
   afterEach(() => {
@@ -172,7 +173,7 @@ describe('corsOriginMiddleware', () => {
   });
 
   it('allows normal trusted origins on any API path', async () => {
-    jest.mocked(isTrustedOrigin).mockResolvedValue(true);
+    jest.mocked(isTrustedOriginForRequest).mockResolvedValue(true);
     const request = createRequest({
       method: 'GET',
       origin: 'https://app.trycomp.ai',
@@ -192,7 +193,7 @@ describe('corsOriginMiddleware', () => {
   });
 
   it('advertises every method the previous enableCors config allowed', async () => {
-    jest.mocked(isTrustedOrigin).mockResolvedValue(true);
+    jest.mocked(isTrustedOriginForRequest).mockResolvedValue(true);
     const request = createRequest({
       method: 'OPTIONS',
       origin: 'https://app.trycomp.ai',
@@ -213,7 +214,7 @@ describe('corsOriginMiddleware', () => {
   });
 
   it('varies on origin even when the origin is rejected, so caches cannot mix responses', async () => {
-    jest.mocked(isTrustedOrigin).mockResolvedValue(false);
+    jest.mocked(isTrustedOriginForRequest).mockResolvedValue(false);
     const request = createRequest({
       method: 'GET',
       origin: 'https://untrusted.example',

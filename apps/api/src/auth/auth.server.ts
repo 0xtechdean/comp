@@ -21,7 +21,6 @@ import {
 } from 'better-auth/plugins';
 import { ac, allRoles } from '@trycompai/auth';
 import { createAuthMiddleware } from 'better-auth/api';
-import { Redis } from '@upstash/redis';
 import type { AccessControl } from 'better-auth/plugins/access';
 import {
   resolveMicrosoftEmail,
@@ -30,7 +29,9 @@ import {
 import {
   getBetterAuthTrustedOrigins,
   isStaticTrustedOrigin,
+  isStaticTrustedOriginForRequest,
 } from './origin-policy';
+import { isTrustPortalRequestAllowed } from './trust-portal-origin-policy';
 
 export {
   getBetterAuthTrustedOrigins,
@@ -68,94 +69,10 @@ function getCookieDomain(): string | undefined {
   return undefined;
 }
 
-// ── Custom domain lookup via Redis cache ─────────────────────────────────────
-
-const CORS_DOMAINS_CACHE_KEY = 'cors:custom-domains';
-const CORS_DOMAINS_CACHE_TTL_SECONDS = 5 * 60; // 5 minutes
-
-// Optional: only construct the Redis client when Upstash is configured.
-// Without it, custom-domain CORS lookups fall back to the DB directly and the
-// API still boots (self-hosting doesn't require Upstash).
-const corsRedisClient =
-  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-    ? new Redis({
-        url: process.env.UPSTASH_REDIS_REST_URL,
-        token: process.env.UPSTASH_REDIS_REST_TOKEN,
-      })
-    : null;
-
-/**
- * Published custom trust-portal domains, for the CORS allowlist.
- *
- * Deliberately does NOT require the DNS-verification flag — see PR #2371. That
- * flag only flips once an admin finishes our DNS check, but Vercel serves the
- * portal as soon as the domain is attached, so requiring it made every
- * client-side call from a live portal fail CORS ("Request Access" →
- * "Failed to fetch"). It regressed once as a one-line change in c21c6565d and
- * went unnoticed for months. auth-server-origins.spec.ts guards the function
- * body, so keep this explanation out here where it cannot trip the check.
- */
-async function getCustomDomains(): Promise<Set<string>> {
-  // Try Redis cache first (non-fatal if Redis is unavailable)
-  try {
-    const cached = await corsRedisClient?.get<string[]>(CORS_DOMAINS_CACHE_KEY);
-    if (cached) {
-      return new Set(cached);
-    }
-  } catch (error) {
-    console.error('[CORS] Redis cache read failed, falling back to DB:', error);
-  }
-
-  // Cache miss or Redis unavailable — query DB
-  try {
-    const trusts = await db.trust.findMany({
-      where: {
-        domain: { not: null },
-        status: 'published',
-      },
-      select: { domain: true },
-    });
-
-    const domains = trusts
-      .map((t) => t.domain)
-      .filter((d): d is string => d !== null);
-
-    // Best-effort cache update (don't lose DB results if Redis SET fails)
-    try {
-      await corsRedisClient?.set(CORS_DOMAINS_CACHE_KEY, domains, {
-        ex: CORS_DOMAINS_CACHE_TTL_SECONDS,
-      });
-    } catch {
-      // Redis unavailable — continue without caching
-    }
-
-    return new Set(domains);
-  } catch (error) {
-    console.error('[CORS] Failed to fetch custom domains from DB:', error);
-    return new Set();
-  }
-}
-
-/**
- * Check if an origin is trusted. Checks (in order):
- * 1. Static trusted origins list
- * 2. *.trycomp.ai / *.trust.inc subdomains
- * 3. Published custom domains from the DB (cached in Redis, TTL 5 min)
- */
-export async function isTrustedOrigin(origin: string): Promise<boolean> {
-  if (isStaticTrustedOrigin(origin)) {
-    return true;
-  }
-
-  // Check verified custom domains from DB via Redis cache
-  try {
-    const url = new URL(origin);
-    const customDomains = await getCustomDomains();
-    return customDomains.has(url.hostname);
-  } catch {
-    return false;
-  }
-}
+export {
+  isTrustedOrigin,
+  isTrustedOriginForRequest,
+} from './trusted-origins';
 
 // Build social providers config
 const socialProviders: Record<string, unknown> = {};
