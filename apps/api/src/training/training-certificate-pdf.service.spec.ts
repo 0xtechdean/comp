@@ -50,7 +50,7 @@ describe('TrainingCertificatePdfService', () => {
     });
 
     it('handles logo fetch failure gracefully', async () => {
-      (global.fetch as jest.Mock).mockRejectedValueOnce(
+      (global.fetch as unknown as jest.Mock).mockRejectedValueOnce(
         new Error('Network error'),
       );
 

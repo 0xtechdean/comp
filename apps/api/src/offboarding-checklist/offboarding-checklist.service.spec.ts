@@ -1,6 +1,9 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
-const mockDb = {
+// The table mocks live in their own binding so the `$transaction` callback
+// below can name their type. Declaring it inline made `mockDb` reference its
+// own `typeof` mid-initialiser, which TS cannot resolve.
+const mockTables = {
   offboardingChecklistTemplate: {
     findMany: jest.fn(),
     findFirst: jest.fn(),
@@ -38,7 +41,15 @@ const mockDb = {
   attachment: {
     findMany: jest.fn(),
   },
-  $transaction: jest.fn((fn: (tx: typeof mockDb) => Promise<unknown>) => fn(mockDb)),
+};
+
+// Spread copies the jest.fn references, so assertions on mockDb.<table>.<fn>
+// still observe calls made through the transaction client.
+const mockDb = {
+  ...mockTables,
+  $transaction: jest.fn((fn: (tx: typeof mockTables) => Promise<unknown>) =>
+    fn(mockTables),
+  ),
 };
 
 jest.mock('@db', () => ({

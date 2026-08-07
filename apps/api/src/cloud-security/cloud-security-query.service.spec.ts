@@ -102,6 +102,7 @@ jest.mock('./finding-exceptions', () => ({
 
 import { getManifest } from '@trycompai/integration-platform';
 import { CloudSecurityQueryService } from './cloud-security-query.service';
+import { CLOUD_SCAN_CHECK_IDS } from './cloud-provider-slugs';
 
 const ORG_ID = 'org_test';
 const CONNECTION_ID = 'icn_aws';
@@ -237,9 +238,9 @@ describe('CloudSecurityQueryService — latest-run scoping (CS-702)', () => {
     expect(dbMock.integrationCheckRun.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          checkId: {
-            in: ['aws-security-scan', 'gcp-security-scan', 'azure-security-scan'],
-          },
+          // Derived, not restated: this fork adds providers upstream lacks, and
+          // a hardcoded list only fails long after the drift is introduced.
+          checkId: { in: CLOUD_SCAN_CHECK_IDS },
         }),
       }),
     );

@@ -87,7 +87,7 @@ describe('TimelinesService', () => {
           orderIndex: 0,
           status: 'IN_PROGRESS',
           completionType: 'AUTO_POLICIES',
-          completedAt: null,
+          completedAt: null as string | null,
         },
         {
           id: 'p2',
@@ -95,7 +95,7 @@ describe('TimelinesService', () => {
           orderIndex: 1,
           status: 'PENDING',
           completionType: 'AUTO_TASKS',
-          completedAt: null,
+          completedAt: null as string | null,
         },
         {
           id: 'p3',
@@ -103,7 +103,7 @@ describe('TimelinesService', () => {
           orderIndex: 2,
           status: 'PENDING',
           completionType: 'AUTO_PEOPLE',
-          completedAt: null,
+          completedAt: null as string | null,
         },
         {
           id: 'p4',
@@ -111,7 +111,7 @@ describe('TimelinesService', () => {
           orderIndex: 3,
           status: 'PENDING',
           completionType: 'MANUAL',
-          completedAt: null,
+          completedAt: null as string | null,
         },
       ],
       frameworkInstance: { framework: { id: 'frk_1', name: 'SOC 2' } },

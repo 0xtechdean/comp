@@ -19,18 +19,46 @@ jest.mock('./ensure-valid-credentials', () => ({
   requestValidCredentials: jest.fn(),
 }));
 
+/**
+ * The mocked `schedules.task` returns its config object verbatim, so `run` is
+ * callable here even though the real SDK's `Task` type does not expose it.
+ * Only the two fields the task actually reads are modelled.
+ */
+const runSchedule = (
+  refreshExpiringTokensSchedule as unknown as {
+    run: (payload: { timestamp: Date; lastTimestamp?: Date }) => Promise<{
+      refreshed: number;
+      failed: number;
+      skipped: number;
+      total?: number;
+    }>;
+  }
+).run;
+
 describe('refreshExpiringTokensSchedule', () => {
   const nowMs = Date.parse('2026-04-24T00:00:00.000Z');
-  const lookaheadMs = 24 * 60 * 60 * 1000;
+  const originalApiUrl = process.env.API_URL;
 
   beforeEach(() => {
-    jest.spyOn(Date, 'now').mockReturnValue(nowMs);
+    // The task reads `new Date()`, not `Date.now()`, so a spy on Date.now alone
+    // left it comparing the fixtures against the real clock — every fixture read
+    // as already expired and nothing was ever selected for refresh.
+    jest.useFakeTimers({ now: nowMs });
+    // Without API_URL the task logs an error and returns zeroed counters before
+    // it ever queries, so every assertion below would pass vacuously at 0.
+    process.env.API_URL = 'https://api.test.local';
     (requestValidCredentials as jest.Mock).mockResolvedValue({ success: true });
   });
 
   afterEach(() => {
+    jest.useRealTimers();
     jest.restoreAllMocks();
     jest.clearAllMocks();
+    if (originalApiUrl === undefined) {
+      delete process.env.API_URL;
+      return;
+    }
+    process.env.API_URL = originalApiUrl;
   });
 
   it('refreshes only connections whose latest credential version expires soon', async () => {
@@ -58,10 +86,7 @@ describe('refreshExpiringTokensSchedule', () => {
       connectionWithLatestExpiringSoon,
     ]);
 
-    const result = await refreshExpiringTokensSchedule.run({
-      timestamp: new Date(nowMs).toISOString(),
-      lastTimestamp: null,
-    } as any);
+    const result = await runSchedule({ timestamp: new Date(nowMs) });
 
     expect(result.refreshed).toBe(1);
     expect(requestValidCredentials).toHaveBeenCalledTimes(1);
@@ -86,10 +111,7 @@ describe('refreshExpiringTokensSchedule', () => {
       connectionLatestValid,
     ]);
 
-    const result = await refreshExpiringTokensSchedule.run({
-      timestamp: new Date(nowMs).toISOString(),
-      lastTimestamp: null,
-    } as any);
+    const result = await runSchedule({ timestamp: new Date(nowMs) });
 
     expect(result.refreshed).toBe(0);
     expect(requestValidCredentials).not.toHaveBeenCalled();

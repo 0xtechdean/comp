@@ -7,6 +7,7 @@ import { CredentialVaultService } from '../services/credential-vault.service';
 import { OAuthCredentialsService } from '../services/oauth-credentials.service';
 import { IntegrationSyncLoggerService } from '../services/integration-sync-logger.service';
 import { GenericEmployeeSyncService } from '../services/generic-employee-sync.service';
+import { GenericDeviceSyncService } from '../services/generic-device-sync.service';
 import { DynamicIntegrationRepository } from '../repositories/dynamic-integration.repository';
 import { CheckRunRepository } from '../repositories/check-run.repository';
 import { db } from '@db';
@@ -47,7 +48,9 @@ jest.mock('@trycompai/integration-platform', () => {
 });
 
 const mockFetch = jest.fn();
-global.fetch = mockFetch;
+// A jest.fn() is not structurally `typeof fetch` (no `preconnect`), and these
+// tests only ever call it — widen through unknown rather than stub the rest.
+global.fetch = mockFetch as unknown as typeof fetch;
 
 const mockedDb = db as jest.Mocked<typeof db>;
 
@@ -104,6 +107,7 @@ describe('SyncController - Google Workspace employees', () => {
           useValue: { logSync: jest.fn() },
         },
         { provide: GenericEmployeeSyncService, useValue: {} },
+        { provide: GenericDeviceSyncService, useValue: {} },
         { provide: DynamicIntegrationRepository, useValue: {} },
         { provide: CheckRunRepository, useValue: {} },
       ],
@@ -145,6 +149,8 @@ describe('SyncController - Google Workspace employees', () => {
     mockOAuthCredentials.getCredentials.mockResolvedValue({
       clientId: 'client-id',
       clientSecret: 'client-secret',
+      scopes: [],
+      source: 'platform',
     });
 
     mockCredentialVault.refreshOAuthTokens.mockResolvedValue('new-token');
@@ -306,7 +312,9 @@ describe('SyncController - Google Workspace employees', () => {
       expect(result.skipped).toBe(0);
       expect(mockedDb.member.update).toHaveBeenCalledWith({
         where: { id: 'mem_back' },
-        data: { deactivated: false, isActive: true },
+        // Reactivation clears the offboard date too — a rehired member who kept
+        // their old offboardDate would keep reading as departed downstream.
+        data: { deactivated: false, isActive: true, offboardDate: null },
       });
     });
 

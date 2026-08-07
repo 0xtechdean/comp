@@ -7,6 +7,13 @@ import { ConnectionRepository } from '../repositories/connection.repository';
 import { ProviderRepository } from '../repositories/provider.repository';
 import { CredentialVaultService } from '../services/credential-vault.service';
 import { AutoCheckRunnerService } from '../services/auto-check-runner.service';
+import { ConnectionService } from '../services/connection.service';
+import { ConnectionAuthResolverService } from '../services/connection-auth-resolver.service';
+
+// ConnectionService imports the real client from '@db', which refuses to
+// initialise against a non-local Postgres. Every DB-touching dependency here is
+// injected as a mock, so the module only needs to not blow up on import.
+jest.mock('@db', () => ({ db: {} }));
 
 jest.mock('../../auth/auth.server', () => ({
   auth: { api: { getSession: jest.fn() } },
@@ -49,6 +56,17 @@ describe('VariablesController', () => {
     tryAutoRunChecks: jest.fn().mockResolvedValue(false),
   };
 
+  // The tenant guard every variables endpoint runs first. Resolving means the
+  // connection belongs to the caller's org; the cross-tenant case is covered in
+  // its own test below.
+  const mockConnectionService = {
+    getConnectionForOrg: jest.fn().mockResolvedValue({ id: 'conn_1' }),
+  };
+
+  const mockConnectionAuthResolver = {
+    resolve: jest.fn().mockResolvedValue({ accessToken: 'tok_1' }),
+  };
+
   const mockGuard = { canActivate: jest.fn().mockReturnValue(true) };
 
   beforeEach(async () => {
@@ -65,6 +83,11 @@ describe('VariablesController', () => {
           provide: AutoCheckRunnerService,
           useValue: mockAutoCheckRunnerService,
         },
+        { provide: ConnectionService, useValue: mockConnectionService },
+        {
+          provide: ConnectionAuthResolverService,
+          useValue: mockConnectionAuthResolver,
+        },
       ],
     })
       .overrideGuard(HybridAuthGuard)
@@ -77,6 +100,14 @@ describe('VariablesController', () => {
 
     jest.clearAllMocks();
     mockAutoCheckRunnerService.tryAutoRunChecks.mockResolvedValue(false);
+    // Default: the connection belongs to the caller's org, so the tenant guard
+    // passes and each test exercises the behaviour it actually names.
+    mockConnectionService.getConnectionForOrg.mockResolvedValue({
+      id: 'conn_1',
+    });
+    mockConnectionAuthResolver.resolve.mockResolvedValue({
+      accessToken: 'tok_1',
+    });
   });
 
   describe('getProviderVariables', () => {
@@ -204,7 +235,7 @@ describe('VariablesController', () => {
         checks: [],
       } as never);
 
-      const result = await controller.getConnectionVariables('conn_1');
+      const result = await controller.getConnectionVariables('conn_1', 'org_1');
 
       expect(result.connectionId).toBe('conn_1');
       expect(result.providerSlug).toBe('github');
@@ -216,7 +247,7 @@ describe('VariablesController', () => {
       mockConnectionRepository.findById.mockResolvedValue(null);
 
       await expect(
-        controller.getConnectionVariables('nonexistent'),
+        controller.getConnectionVariables('nonexistent', 'org_1'),
       ).rejects.toThrow(HttpException);
     });
 
@@ -228,7 +259,7 @@ describe('VariablesController', () => {
       });
       mockProviderRepository.findById.mockResolvedValue(null);
 
-      await expect(controller.getConnectionVariables('conn_1')).rejects.toThrow(
+      await expect(controller.getConnectionVariables('conn_1', 'org_1')).rejects.toThrow(
         HttpException,
       );
     });
@@ -245,7 +276,7 @@ describe('VariablesController', () => {
       });
       mockedGetManifest.mockReturnValue(undefined as never);
 
-      await expect(controller.getConnectionVariables('conn_1')).rejects.toThrow(
+      await expect(controller.getConnectionVariables('conn_1', 'org_1')).rejects.toThrow(
         HttpException,
       );
     });
@@ -256,7 +287,7 @@ describe('VariablesController', () => {
       mockConnectionRepository.findById.mockResolvedValue(null);
 
       await expect(
-        controller.fetchVariableOptions('nonexistent', 'var_1'),
+        controller.fetchVariableOptions('nonexistent', 'var_1', 'org_1'),
       ).rejects.toThrow(HttpException);
     });
 
@@ -268,7 +299,7 @@ describe('VariablesController', () => {
       });
 
       await expect(
-        controller.fetchVariableOptions('conn_1', 'var_1'),
+        controller.fetchVariableOptions('conn_1', 'var_1', 'org_1'),
       ).rejects.toThrow(HttpException);
     });
 
@@ -294,7 +325,7 @@ describe('VariablesController', () => {
         checks: [],
       } as never);
 
-      const result = await controller.fetchVariableOptions('conn_1', 'var_1');
+      const result = await controller.fetchVariableOptions('conn_1', 'var_1', 'org_1');
 
       expect(result.options).toEqual([{ value: 'a', label: 'A' }]);
     });
@@ -315,7 +346,7 @@ describe('VariablesController', () => {
       } as never);
 
       await expect(
-        controller.fetchVariableOptions('conn_1', 'missing_var'),
+        controller.fetchVariableOptions('conn_1', 'missing_var', 'org_1'),
       ).rejects.toThrow(HttpException);
     });
   });
@@ -330,7 +361,7 @@ describe('VariablesController', () => {
 
       const result = await controller.saveConnectionVariables('conn_1', {
         variables: { newVar: 'newValue' },
-      });
+      }, 'org_1');
 
       expect(mockConnectionRepository.update).toHaveBeenCalledWith('conn_1', {
         variables: { existing: 'value', newVar: 'newValue' },
@@ -348,7 +379,7 @@ describe('VariablesController', () => {
       await expect(
         controller.saveConnectionVariables('nonexistent', {
           variables: { key: 'val' },
-        }),
+        }, 'org_1'),
       ).rejects.toThrow(HttpException);
     });
 
@@ -361,7 +392,7 @@ describe('VariablesController', () => {
 
       const result = await controller.saveConnectionVariables('conn_1', {
         variables: { newVar: 'value' },
-      });
+      }, 'org_1');
 
       expect(mockConnectionRepository.update).toHaveBeenCalledWith('conn_1', {
         variables: { newVar: 'value' },
@@ -378,7 +409,7 @@ describe('VariablesController', () => {
 
       await controller.saveConnectionVariables('conn_1', {
         variables: { key: 'val' },
-      });
+      }, 'org_1');
 
       expect(mockAutoCheckRunnerService.tryAutoRunChecks).toHaveBeenCalledWith(
         'conn_1',

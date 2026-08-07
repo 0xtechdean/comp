@@ -5,7 +5,15 @@
     "resolvePackageJsonExports": true,
     "esModuleInterop": true,
     "isolatedModules": true,
-    "declaration": true,
+    // The API is a private application, not a published package — it has no
+    // `main`/`types` and nothing imports it, so the emitted .d.ts files are the
+    // NestJS starter default that no consumer reads. Leaving declaration on
+    // also made the build fail on `auth`: better-auth's mcp plugin leaks an
+    // `MCPOptions` type that it never exports from a public entry point, so the
+    // declaration for `export const auth` cannot be written (TS4023). That was
+    // latent until the rest of the typecheck went green — TypeScript only
+    // reports declaration diagnostics once the semantic pass is clean.
+    "declaration": false,
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,

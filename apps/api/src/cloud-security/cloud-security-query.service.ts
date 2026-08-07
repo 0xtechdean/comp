@@ -5,6 +5,10 @@ import { sanitizeEvidence } from './evidence-sanitizer';
 import { getLegacyFindings } from './cloud-security-query.legacy';
 import { resolveCheckKey } from './check-definition.utils';
 import { loadActiveExceptionSet } from './finding-exceptions';
+import {
+  CLOUD_PROVIDER_SLUGS,
+  CLOUD_SCAN_CHECK_IDS,
+} from './cloud-provider-slugs';
 import type {
   CloudFinding,
   CloudProvider,
@@ -14,21 +18,6 @@ import type {
 // Re-export so existing imports of CloudProvider/CloudFinding from the service
 // path keep working (the controller imports them).
 export type { CloudFinding, CloudProvider, CloudProviderLatestRun };
-
-const CLOUD_PROVIDER_SLUGS = ['aws', 'gcp', 'azure', 'railway'] as const;
-
-// The cloud-security scan persists exactly one run per connection under this
-// coarse, run-level checkId (`storeFindings` in cloud-security.service.ts). The
-// SAME connection also accumulates OTHER IntegrationCheckRun rows on different
-// schedules — per-task evidence checks (checkId = manifest check id, taskId set,
-// written ~06:00 UTC) and the on-connect "All Checks (Auto)" run (checkId
-// 'all'), each holding only a handful of results. The latest-run lookups below
-// MUST scope to these scan runs; otherwise a later per-task run shadows the
-// full daily scan and the Cloud Tests dashboard shows a fraction of the
-// findings (CS-702).
-const CLOUD_SCAN_CHECK_IDS = CLOUD_PROVIDER_SLUGS.map(
-  (slug) => `${slug}-security-scan`,
-);
 
 /** Extract project ID from a GCP resource path like //iam.googleapis.com/projects/my-proj/... */
 function extractProjectIdFromResource(

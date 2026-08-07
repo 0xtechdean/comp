@@ -43,6 +43,14 @@ const makeCredentialVersion = (): IntegrationCredentialVersion => ({
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
 });
 
+/**
+ * `encryptedPayload` is typed `object` on the Prisma model, so its keys are not
+ * addressable directly. These tests assert on individual credential fields, so
+ * view it as the string-keyed bag it actually is.
+ */
+const payloadOf = (input: { encryptedPayload: object }): Record<string, unknown> =>
+  input.encryptedPayload as Record<string, unknown>;
+
 const buildService = () => {
   const credentialRepository = new CredentialRepository();
   const connectionRepository = new ConnectionRepository();
@@ -84,11 +92,11 @@ describe('CredentialVaultService multi-DC api_domain handling', () => {
 
     // Stored as a plaintext string (not encrypted) so the check runtime can
     // read it as ctx.credentials.api_domain and route to the right region.
-    expect(createInput.encryptedPayload.api_domain).toBe(
+    expect(payloadOf(createInput).api_domain).toBe(
       'https://www.zohoapis.eu',
     );
     // Secrets are still encrypted.
-    expect(createInput.encryptedPayload.access_token).toEqual(
+    expect(payloadOf(createInput).access_token).toEqual(
       encrypted('zoho-access'),
     );
     // No need to read the prior credential when the response already has it.
@@ -112,7 +120,7 @@ describe('CredentialVaultService multi-DC api_domain handling', () => {
     const createInput = createSpy.mock.calls[0]?.[0];
     if (!createInput) throw new Error('Expected credential version to be created');
 
-    expect(createInput.encryptedPayload.api_domain).toBe(
+    expect(payloadOf(createInput).api_domain).toBe(
       'https://www.zohoapis.in',
     );
   });
