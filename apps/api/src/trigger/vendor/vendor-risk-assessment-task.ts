@@ -347,13 +347,24 @@ export const vendorRiskAssessmentTask: Task<
   VendorRiskAssessmentResult
 > = schemaTask({
   id: VENDOR_RISK_ASSESSMENT_TASK_ID,
-  queue: queue({ name: 'vendor-risk-assessment', concurrencyLimit: 10 }),
+  // concurrencyLimit 1, not because one run is expensive but because the
+  // Firecrawl rate limit is per API KEY and the key is global to the deployment:
+  // a single vendor research bursts ~14 requests, which is the whole per-minute
+  // budget. Anything above 1 therefore rate-limits itself rather than going
+  // faster. Observed 2026-08-09: 6 vendors triggered together, 5 died in ~12s
+  // with "Rate limit exceeded. Consumed (req/min): 14, Remaining: 0" while the
+  // one that got there first succeeded. The monthly schedule batch-triggers
+  // every vendor at once, so this queue is the only thing serialising them.
+  queue: queue({ name: 'vendor-risk-assessment', concurrencyLimit: 1 }),
   schema: vendorRiskAssessmentPayloadSchema,
+  // Rate-limit rejections are the expected contention here and they resolve on
+  // the next minute boundary, so back off past it rather than burning all three
+  // attempts inside 12s (which is exactly what happened on 2026-08-09).
   retry: {
     maxAttempts: 3,
     factor: 2,
-    minTimeoutInMs: 1000,
-    maxTimeoutInMs: 10000,
+    minTimeoutInMs: 30_000,
+    maxTimeoutInMs: 120_000,
   },
   // 30 minutes total: Firecrawl Agent can take up to 25 min on slow SPA
   // trust centers (Ubiquiti), and deep-scrape + DB writes need room too.
