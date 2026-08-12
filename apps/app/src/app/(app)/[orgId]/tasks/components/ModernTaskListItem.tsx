@@ -117,7 +117,7 @@ export function ModernTaskListItem({
               {member.user?.image ? (
                 <Image
                   src={member.user.image}
-                  alt={member.user.name ?? 'Assignee'}
+                  alt={member.user.name || 'Assignee'}
                   width={32}
                   height={32}
                   className="object-cover"

@@ -342,7 +342,7 @@ export function TasksByCategory({ tasks, members, statusFilter }: TasksByCategor
                               {member.user?.image ? (
                                 <Image
                                   src={member.user.image}
-                                  alt={member.user.name ?? 'Assignee'}
+                                  alt={member.user.name || 'Assignee'}
                                   width={32}
                                   height={32}
                                   className="h-full w-full object-cover"

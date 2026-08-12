@@ -206,7 +206,7 @@ export function TaskCard({
             {assignedMember?.user?.image ? (
               <Image
                 src={assignedMember.user.image}
-                alt={assignedMember.user.name ?? 'Assignee'}
+                alt={assignedMember.user.name || 'Assignee'}
                 width={20}
                 height={20}
                 className="object-cover"

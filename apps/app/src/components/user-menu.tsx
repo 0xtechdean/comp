@@ -23,7 +23,7 @@ export async function UserMenu({ onlySignOut, orgId }: { onlySignOut?: boolean; 
           {session?.user?.image && (
             <AvatarImageNext
               src={session?.user?.image}
-              alt={session?.user?.name ?? session?.user?.email ?? ''}
+              alt={session?.user?.name || session?.user?.email || ''}
               width={32}
               height={32}
             />

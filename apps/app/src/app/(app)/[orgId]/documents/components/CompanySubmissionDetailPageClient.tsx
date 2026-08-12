@@ -209,7 +209,7 @@ export function CompanySubmissionDetailPageClient({
                 Submitted By
               </div>
               <div className="lg:col-span-2 text-sm">
-                {submission.submittedBy?.name ?? submission.submittedBy?.email ?? 'Unknown'}
+                {submission.submittedBy?.name || submission.submittedBy?.email || 'Unknown'}
               </div>
             </div>
             {formType === 'access-request' && submission.status !== 'pending' && (
@@ -219,7 +219,7 @@ export function CompanySubmissionDetailPageClient({
                     Reviewed By
                   </div>
                   <div className="lg:col-span-2 text-sm">
-                    {submission.reviewedBy?.name ?? submission.reviewedBy?.email ?? '—'}
+                    {submission.reviewedBy?.name || submission.reviewedBy?.email || '—'}
                   </div>
                 </div>
                 {submission.reviewReason && (

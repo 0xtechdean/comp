@@ -203,7 +203,7 @@ export function CommentItem({ comment, refreshComments, readOnly = false, entity
           <Avatar>
             <AvatarImage
               src={comment.author.image || getGravatarUrl(comment.author.email)}
-              alt={comment.author.name ?? 'User'}
+              alt={comment.author.name || 'User'}
             />
             <AvatarFallback>{comment.author.name?.charAt(0).toUpperCase() ?? '?'}</AvatarFallback>
           </Avatar>
@@ -227,7 +227,7 @@ export function CommentItem({ comment, refreshComments, readOnly = false, entity
             <div className="mb-1 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <span className="leading-none font-medium">
-                  {comment.author.name ?? 'Unknown User'}
+                  {comment.author.name || 'Unknown User'}
                 </span>
                 <span className="text-muted-foreground text-xs">
                   {!isEditing ? formatRelativeTime(comment.createdAt) : 'Editing...'}

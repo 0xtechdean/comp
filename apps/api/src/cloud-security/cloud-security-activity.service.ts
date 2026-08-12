@@ -99,7 +99,7 @@ export class CloudSecurityActivityService {
         type: ACTION_TYPE_MAP[action] ?? 'scan',
         description: log.description ?? '',
         userId: log.user?.id ?? null,
-        userName: log.user?.name ?? null,
+        userName: log.user?.name || null,
         status,
         timestamp: log.timestamp.toISOString(),
         metadata: data,

@@ -15,6 +15,7 @@ function capitalize(s: string) {
 import { Comments } from '@/components/comments/Comments';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useSession } from '@/utils/auth-client';
+import { memberDisplayName } from '@/utils/member-display-name';
 import { FindingSeverity, FindingStatus } from '@db';
 import {
   AlertDialog,
@@ -137,7 +138,7 @@ function targetLabel(f: Finding): string {
   if (f.policy) return `Policy: ${f.policy.name}`;
   if (f.vendor) return `Vendor: ${f.vendor.name}`;
   if (f.risk) return `Risk: ${f.risk.title}`;
-  if (f.member) return `Person: ${f.member.user.name ?? f.member.user.email}`;
+  if (f.member) return `Person: ${memberDisplayName(f.member.user)}`;
   if (f.device) return `Device: ${f.device.name || f.device.hostname}`;
   if (f.evidenceSubmission) return `Document: ${f.evidenceSubmission.formType}`;
   if (f.evidenceFormType) return `Document: ${f.evidenceFormType}`;

@@ -2,14 +2,9 @@ import { NotFoundException } from '@nestjs/common';
 import { db } from '@db';
 import type { Prisma } from '@db';
 import type { ReviewAttendee } from '../documents/management-review';
+import { memberDisplayName } from '../../utils/member-display-name';
 
 type Client = Prisma.TransactionClient | typeof db;
-
-function memberDisplayName(
-  user: { name: string | null; email: string | null } | null,
-): string {
-  return user?.name?.trim() || user?.email?.trim() || 'Unknown member';
-}
 
 /**
  * Resolve the ticket's participant defaults for a new review from the ISMS >

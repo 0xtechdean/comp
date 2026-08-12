@@ -123,7 +123,10 @@ export class OffboardingChecklistService {
 
     const completions = await db.offboardingChecklistCompletion.findMany({
       where: { organizationId, memberId },
-      include: { completedBy: { select: { id: true, name: true } } },
+      // `email` backs the display-name fallback: `user.name` is non-nullable
+      // and is `''` for anyone invited but not yet onboarded, so name alone
+      // would leave "Completed By" blank in the auditor-facing export.
+      include: { completedBy: { select: { id: true, name: true, email: true } } },
     });
 
     const completionMap = new Map(

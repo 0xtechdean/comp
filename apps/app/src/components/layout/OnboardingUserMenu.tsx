@@ -40,7 +40,7 @@ export function OnboardingUserMenu({ user }: OnboardingUserMenuProps) {
           {user.image && (
             <AvatarImageNext
               src={user.image}
-              alt={user.name ?? user.email ?? ''}
+              alt={user.name || user.email || ''}
               width={32}
               height={32}
               quality={100}

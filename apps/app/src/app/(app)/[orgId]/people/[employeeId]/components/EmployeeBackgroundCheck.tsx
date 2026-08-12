@@ -148,7 +148,7 @@ export function EmployeeBackgroundCheck({
       const response = await apiClient.post<BackgroundCheckRecord>(
         `/v1/people/${employee.id}/background-check/custom`,
         {
-          employeeName: employee.user.name ?? employee.user.email,
+          employeeName: employee.user.name || employee.user.email,
           employeeEmail: employee.user.email,
           fileName: attachValues.file.name,
           fileType: attachValues.file.type || 'application/pdf',
@@ -191,7 +191,7 @@ export function EmployeeBackgroundCheck({
     }
 
     setExempt(true);
-    toast.success(`${employee.user.name ?? 'Employee'} exempted from background check`);
+    toast.success(`${employee.user.name || 'Employee'} exempted from background check`);
   };
 
   const handleToggleExempt = async (next: boolean) => {

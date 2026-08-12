@@ -166,13 +166,13 @@ export default async function IsmsDocumentPage({
   );
   const approverOptions: ApproverOption[] = activeMembers
     .filter((_, index) => approverFlags[index])
-    .map((p) => ({ id: p.id, name: p.user?.name ?? p.user?.email ?? 'Unknown' }))
+    .map((p) => ({ id: p.id, name: p.user?.name || p.user?.email || 'Unknown' }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   // All active members — the Roles document assigns to the whole workforce, not
   // just approvers, so it needs the full list plus the headcount for the band.
   const memberOptions: ApproverOption[] = activeMembers
-    .map((p) => ({ id: p.id, name: p.user?.name ?? p.user?.email ?? 'Unknown' }))
+    .map((p) => ({ id: p.id, name: p.user?.name || p.user?.email || 'Unknown' }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   // The Internal Audit auditor dropdown is whoever Roles (5.3) says the

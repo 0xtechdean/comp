@@ -5,6 +5,7 @@ import { toExternalEvidenceFormType } from '@trycompai/company';
 import { triggerEmail } from '../email/trigger-email';
 import { FindingNotificationEmail } from '../email/templates/finding-notification';
 import { NovuService } from '../notifications/novu.service';
+import { memberDisplayName } from '../utils/member-display-name';
 
 const FINDING_WORKFLOW_ID = 'finding-notification';
 const EMAIL_CONTENT_MAX_LENGTH = 200;
@@ -114,7 +115,7 @@ function findingLabel(f: FindingForNotification): string {
   if (f.policy) return `Policy: ${f.policy.name}`;
   if (f.vendor) return `Vendor: ${f.vendor.name}`;
   if (f.risk) return `Risk: ${f.risk.title}`;
-  if (f.member) return `Person: ${f.member.user.name ?? f.member.user.email}`;
+  if (f.member) return `Person: ${memberDisplayName(f.member.user)}`;
   if (f.device) return `Device: ${f.device.name || f.device.hostname}`;
   if (f.evidenceSubmission)
     return `Document: ${normalizeFormType(f.evidenceSubmission.formType) ?? f.evidenceSubmission.formType}`;
