@@ -113,6 +113,38 @@ describe('FindingsTab', () => {
     ).toBeInTheDocument();
   });
 
+  it('falls back to the email when a person finding targets a user with a blank name', () => {
+    // `user.name` is non-nullable, so someone invited but not yet onboarded
+    // carries `''` — the label must not render a bare "Person:".
+    setMockPermissions(ADMIN_PERMISSIONS);
+    mockUseOrganizationFindings.mockReturnValue({
+      data: {
+        data: [
+          makeFinding({
+            taskId: null,
+            task: null,
+            memberId: 'mem_2',
+            member: {
+              id: 'mem_2',
+              user: {
+                id: 'usr_2',
+                name: '',
+                email: 'dimar@example.com',
+                image: null,
+              },
+            },
+          }),
+        ],
+        status: 200,
+      },
+      mutate: vi.fn(),
+    });
+
+    render(<FindingsTab organizationId="org_1" />);
+
+    expect(screen.getByText('Person: dimar@example.com')).toBeInTheDocument();
+  });
+
   it('does not render the CreateFindingSheet mount for users without finding:create (admin)', () => {
     // Admins no longer have finding:create — sheet is only mounted for auditors
     setMockPermissions(ADMIN_PERMISSIONS);

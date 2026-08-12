@@ -387,7 +387,7 @@ export function RiskPageClient({
                     ownerId={risk.assigneeId}
                     acceptorOptions={assignees.map((member) => ({
                       id: member.id,
-                      name: member.user?.name ?? member.user?.email ?? 'Unknown',
+                      name: member.user?.name || member.user?.email || 'Unknown',
                     }))}
                     canUpdate={canUpdate}
                   />

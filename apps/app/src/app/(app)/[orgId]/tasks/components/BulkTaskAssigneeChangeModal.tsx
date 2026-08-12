@@ -34,7 +34,7 @@ const UnassignedAvatar = () => (
 
 const MemberAvatar = ({ member }: { member: Member & { user: User } }) => (
   <Avatar className="h-5 w-5">
-    <AvatarImage src={member.user.image ?? undefined} alt={member.user.name ?? 'Assignee'} />
+    <AvatarImage src={member.user.image ?? undefined} alt={member.user.name || 'Assignee'} />
     <AvatarFallback>
       {member.user.name?.charAt(0) ?? member.user.email?.charAt(0).toUpperCase() ?? '?'}
     </AvatarFallback>
@@ -42,7 +42,7 @@ const MemberAvatar = ({ member }: { member: Member & { user: User } }) => (
 );
 
 const MemberDisplayName = ({ member }: { member: Member & { user: User } }) => (
-  <span>{member.user.name ?? member.user.email ?? 'Unknown'}</span>
+  <span>{member.user.name || member.user.email || 'Unknown'}</span>
 );
 
 export function BulkTaskAssigneeChangeModal({

@@ -226,7 +226,7 @@ function PolicyRow({
         </Select>
       </TableCell>
       <TableCell>
-        <Text size="sm" variant="muted">{policy.assignee?.user.name ?? '--'}</Text>
+        <Text size="sm" variant="muted">{policy.assignee?.user.name || '--'}</Text>
       </TableCell>
       <TableCell>
         <Text size="sm" variant="muted">

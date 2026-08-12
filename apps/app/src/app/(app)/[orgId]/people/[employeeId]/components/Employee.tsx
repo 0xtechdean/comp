@@ -136,7 +136,7 @@ export function Employee({
     <PageLayout
       header={
         <EmployeePageHeader
-          employeeName={employee.user.name ?? 'Employee'}
+          employeeName={employee.user.name || 'Employee'}
           orgId={orgId}
           backgroundCheck={initialBackgroundCheck}
           backgroundCheckStepEnabled={showBackgroundCheck}

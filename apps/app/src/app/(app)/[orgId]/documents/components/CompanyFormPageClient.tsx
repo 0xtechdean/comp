@@ -524,7 +524,7 @@ export function CompanyFormPageClient({
                         )}
                         <TableCell>
                           <span className="block truncate">
-                            {submission.submittedBy?.name ?? submission.submittedBy?.email ?? 'Unknown'}
+                            {submission.submittedBy?.name || submission.submittedBy?.email || 'Unknown'}
                           </span>
                         </TableCell>
                         {formType === 'access-request' && (

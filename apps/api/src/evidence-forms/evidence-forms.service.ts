@@ -602,8 +602,8 @@ export class EvidenceFormsService {
           organizationId: params.organizationId,
           submitterUserId: params.authContext.userId,
           submitterName:
-            submission.submittedBy?.name ??
-            submission.submittedBy?.email ??
+            submission.submittedBy?.name ||
+            submission.submittedBy?.email ||
             'A user',
           submissionId: submission.id,
           data: parsedPayload.data,

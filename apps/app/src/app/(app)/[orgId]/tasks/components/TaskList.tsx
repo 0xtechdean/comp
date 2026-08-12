@@ -694,7 +694,7 @@ export function TaskList({
                               {selectedMember.user.image && (
                                 <AvatarImage
                                   src={selectedMember.user.image}
-                                  alt={selectedMember.user.name ?? 'Assignee'}
+                                  alt={selectedMember.user.name || 'Assignee'}
                                 />
                               )}
                               <AvatarFallback>
@@ -720,7 +720,7 @@ export function TaskList({
                             {member.user.image && (
                               <AvatarImage
                                 src={member.user.image}
-                                alt={member.user.name ?? 'Assignee'}
+                                alt={member.user.name || 'Assignee'}
                               />
                             )}
                             <AvatarFallback>

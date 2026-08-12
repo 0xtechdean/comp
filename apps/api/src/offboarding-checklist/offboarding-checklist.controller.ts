@@ -183,7 +183,7 @@ export class OffboardingChecklistController {
       include: { user: { select: { name: true } } },
     });
 
-    const safeName = (member?.user.name ?? 'member').replace(
+    const safeName = (member?.user.name || 'member').replace(
       /[^a-zA-Z0-9]/g,
       '-',
     );

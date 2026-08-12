@@ -2,6 +2,7 @@ import { db } from '@db';
 import type { Prisma } from '@db';
 import { conclusionSentence } from './internal-audit-defaults';
 import type { AuditExportRow, AuditSignoffExportRow } from './types';
+import { memberDisplayName } from '../../utils/member-display-name';
 
 /**
  * Extra data the Internal Audit document (9.2) needs at export time but that
@@ -16,12 +17,6 @@ export interface InternalAuditExtras {
 }
 
 type Client = Prisma.TransactionClient | typeof db;
-
-function memberDisplayName(
-  user: { name: string | null; email: string | null } | null,
-): string {
-  return user?.name?.trim() || user?.email?.trim() || 'Unknown member';
-}
 
 /** Load the Internal Audit document's export extras for an organization. */
 export async function loadInternalAuditExtras({

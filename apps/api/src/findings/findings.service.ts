@@ -259,7 +259,7 @@ export class FindingsService {
         kind: 'member' as const,
         id: member.id,
         userId: member.user.id,
-        label: member.user.name ?? member.user.email,
+        label: member.user.name || member.user.email,
       };
     }
     if (createDto.deviceId) {

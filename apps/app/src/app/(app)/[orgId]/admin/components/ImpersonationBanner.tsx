@@ -42,7 +42,7 @@ export function ImpersonationBanner() {
   return (
     <div className="flex items-center justify-between border-b bg-destructive/10 px-4 py-1.5 text-xs text-destructive">
       <span>
-        Impersonating <span className="font-medium">{session?.user?.name ?? 'a user'}</span>{' '}
+        Impersonating <span className="font-medium">{session?.user?.name || 'a user'}</span>{' '}
         ({session?.user?.email})
       </span>
       <button

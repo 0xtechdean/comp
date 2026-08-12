@@ -42,7 +42,7 @@ export default async function EmployeeBackgroundCheckPage({
           title="Background Check"
           breadcrumbs={[
             { label: 'People', href: `/${orgId}/people` },
-            { label: employee.user.name ?? 'Employee', href: `/${orgId}/people/${employeeId}` },
+            { label: employee.user.name || 'Employee', href: `/${orgId}/people/${employeeId}` },
             { label: 'Background Check', isCurrent: true },
           ]}
         />

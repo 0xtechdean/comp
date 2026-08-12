@@ -6,6 +6,7 @@ import {
   type MetricCadenceValue,
 } from '../utils/metric-periods';
 import type { MetricExportRow } from './types';
+import { memberDisplayName } from '../../utils/member-display-name';
 
 /**
  * Extra data the Monitoring document (9.1) needs at export time but that isn't
@@ -27,12 +28,6 @@ export interface MonitoringExtras {
 }
 
 type Client = Prisma.TransactionClient | typeof db;
-
-function memberDisplayName(
-  user: { name: string | null; email: string | null } | null,
-): string {
-  return user?.name?.trim() || user?.email?.trim() || 'Unknown member';
-}
 
 /** Load the Monitoring document's export extras for an organization. */
 export async function loadMonitoringExtras({

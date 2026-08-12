@@ -3,6 +3,7 @@ import type { Prisma } from '@db';
 import { reviewConclusionSentence } from './management-review-defaults';
 import { parseReviewAttendees } from './management-review';
 import type { ReviewActionExportRow, ReviewExportRow } from './types';
+import { memberDisplayName } from '../../utils/member-display-name';
 
 /**
  * Extra data the Management Review document (9.3) needs at export time but
@@ -18,12 +19,6 @@ export interface ManagementReviewExtras {
 }
 
 type Client = Prisma.TransactionClient | typeof db;
-
-function memberDisplayName(
-  user: { name: string | null; email: string | null } | null,
-): string {
-  return user?.name?.trim() || user?.email?.trim() || 'Unknown member';
-}
 
 /** Load the Management Review document's export extras for an organization. */
 export async function loadManagementReviewExtras({

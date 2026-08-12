@@ -11,6 +11,7 @@ import {
 } from '@/hooks/use-findings-api';
 import { usePermissions } from '@/hooks/use-permissions';
 import { formatDate } from '@/lib/format';
+import { memberDisplayName } from '@/utils/member-display-name';
 import { FindingStatus, FindingSeverity, FindingType } from '@db';
 import {
   Badge,
@@ -65,7 +66,7 @@ function targetLabel(f: Finding): string {
   if (f.policy) return `Policy: ${f.policy.name}`;
   if (f.vendor) return `Vendor: ${f.vendor.name}`;
   if (f.risk) return `Risk: ${f.risk.title}`;
-  if (f.member) return `Person: ${f.member.user.name ?? f.member.user.email}`;
+  if (f.member) return `Person: ${memberDisplayName(f.member.user)}`;
   if (f.device) return `Device: ${f.device.name || f.device.hostname}`;
   if (f.evidenceSubmission)
     return `Document: ${f.evidenceSubmission.formType.replace(/-/g, ' ')}`;

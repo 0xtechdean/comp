@@ -4,6 +4,7 @@ import archiver from 'archiver';
 import { AttachmentsService } from '../attachments/attachments.service';
 import { AccessRevocationService } from './access-revocation.service';
 import { OffboardingChecklistService } from './offboarding-checklist.service';
+import { memberDisplayName } from '../utils/member-display-name';
 
 type ChecklistItems = Awaited<
   ReturnType<OffboardingChecklistService['getMemberChecklist']>
@@ -75,7 +76,10 @@ export class OffboardingExportService {
       'Item,Status,Completed By,Completed Date,Evidence Count',
       ...items.map((item) => {
         const status = item.completed ? 'Complete' : 'Pending';
-        const completedBy = item.completion?.completedBy?.name ?? '';
+        const completedBy = memberDisplayName(
+          item.completion?.completedBy,
+          '',
+        );
         const completedDate = item.completion?.completedAt
           ? new Date(item.completion.completedAt).toISOString().split('T')[0]
           : '';
@@ -93,7 +97,7 @@ export class OffboardingExportService {
     const rows = [
       'Vendor,Confirmed By,Date,Has Evidence',
       ...vendors.map((v) => {
-        const confirmedBy = v.revokedBy?.name ?? '';
+        const confirmedBy = memberDisplayName(v.revokedBy, '');
         const date = v.revokedAt
           ? new Date(v.revokedAt).toISOString().split('T')[0]
           : '';
@@ -179,7 +183,7 @@ export class OffboardingExportService {
       });
 
       for (const member of batch) {
-        const safeName = (member.user.name ?? 'member')
+        const safeName = (member.user.name || 'member')
           .replace(/[^a-zA-Z0-9 ]/g, '')
           .replace(/\s+/g, '-')
           .toLowerCase();

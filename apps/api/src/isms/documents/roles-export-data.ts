@@ -2,6 +2,7 @@ import { db } from '@db';
 import type { Prisma } from '@db';
 import type { IsmsTeamSizeBand, OperationalOwnershipRow } from './types';
 import { teamSizeBand } from './roles';
+import { memberDisplayName } from '../../utils/member-display-name';
 
 /**
  * Extra data the Roles document (5.3) needs at export time but that isn't on the
@@ -24,10 +25,6 @@ const OWNER_DISPLAY_CAP = 12;
 type NamedAssignee = {
   assignee: { user: { name: string | null; email: string | null } | null } | null;
 };
-
-function memberDisplayName(user: { name: string | null; email: string | null } | null): string {
-  return user?.name?.trim() || user?.email?.trim() || 'Unknown member';
-}
 
 function dedupeOwners(rows: NamedAssignee[]): string[] {
   const seen = new Set<string>();

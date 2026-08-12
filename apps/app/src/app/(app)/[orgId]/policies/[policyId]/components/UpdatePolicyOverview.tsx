@@ -269,14 +269,14 @@ export function UpdatePolicyOverview({
                 </Text>
                 <Text size="sm">
                   <Text as="span" size="sm" variant="muted">
-                    {assignees.find((a) => a.id === pendingChanges.assigneeId?.from)?.user.name ??
+                    {assignees.find((a) => a.id === pendingChanges.assigneeId?.from)?.user.name ||
                       'Unassigned'}
                   </Text>
                   <Text as="span" size="sm" variant="muted">
                     {' → '}
                   </Text>
                   <Text as="span" size="sm" weight="medium">
-                    {assignees.find((a) => a.id === pendingChanges.assigneeId?.to)?.user.name ??
+                    {assignees.find((a) => a.id === pendingChanges.assigneeId?.to)?.user.name ||
                       'Unassigned'}
                   </Text>
                 </Text>
