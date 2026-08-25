@@ -388,9 +388,15 @@ jobs:
             packages/device-agent/release/*.yml
           if-no-files-found: error
 
+  # Publishing is limited to the release branch. Builds run on every branch so
+  # changes are verified, but only `release` may create a tag, cut a public
+  # GitHub Release, or overwrite the `latest-*` installers in S3 that the
+  # agent's auto-updater points at. Previously nothing gated these jobs — they
+  # were only ever unreachable because the macOS build always failed.
   release:
     name: Create GitHub Release
     needs: [detect-version, build-macos, build-windows, build-linux]
+    if: github.ref == 'refs/heads/release'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -460,6 +466,7 @@ jobs:
   upload-s3:
     name: Upload to S3
     needs: [detect-version, build-macos, build-windows, build-linux]
+    if: github.ref == 'refs/heads/release'
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
