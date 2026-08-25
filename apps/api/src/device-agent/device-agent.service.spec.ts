@@ -54,14 +54,29 @@ describe('DeviceAgentService', () => {
       const result = await service.downloadMacAgent();
 
       expect(result.stream).toBe(mockStream);
-      expect(result.filename).toBe('Comp AI Agent-1.0.0-arm64.dmg');
+      expect(result.filename).toBe('CompAI-Device-Agent-arm64.dmg');
       expect(result.contentType).toBe('application/x-apple-diskimage');
       expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
           Bucket: 'test-bucket',
-          Key: 'macos/Comp AI Agent-1.0.0-arm64.dmg',
+          Key: 'device-agent/production/macos/latest-arm64.dmg',
         }),
       );
+    });
+
+    // Regression: the key was once a hardcoded, version-stamped filename at the
+    // bucket root ('macos/Comp AI Agent-1.0.0-arm64.dmg'). Nothing publishes
+    // there, so the endpoint 404'd, and pinning a version would serve a stale
+    // build even once the path was right.
+    it('resolves the version-agnostic alias under the published prefix', async () => {
+      mockSend.mockResolvedValue({ Body: new Readable({ read() {} }) });
+
+      await service.downloadMacAgent();
+
+      const key = (mockSend.mock.calls[0][0] as { Key: string }).Key;
+      expect(key).toBe('device-agent/production/macos/latest-arm64.dmg');
+      expect(key).not.toMatch(/\d+\.\d+\.\d+/);
+      expect(key.startsWith('device-agent/')).toBe(true);
     });
 
     it('should throw NotFoundException when S3 returns no body', async () => {
@@ -71,7 +86,7 @@ describe('DeviceAgentService', () => {
         NotFoundException,
       );
       await expect(service.downloadMacAgent()).rejects.toThrow(
-        'macOS agent DMG file not found in S3',
+        'macOS agent file not found in S3',
       );
     });
 
@@ -235,14 +250,24 @@ describe('DeviceAgentService', () => {
       const result = await service.downloadWindowsAgent();
 
       expect(result.stream).toBe(mockStream);
-      expect(result.filename).toBe('Comp AI Agent 1.0.0.exe');
+      expect(result.filename).toBe('CompAI-Device-Agent-setup.exe');
       expect(result.contentType).toBe('application/octet-stream');
       expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
           Bucket: 'test-bucket',
-          Key: 'windows/Comp AI Agent 1.0.0.exe',
+          Key: 'device-agent/production/windows/latest-setup.exe',
         }),
       );
+    });
+
+    it('resolves the version-agnostic alias under the published prefix', async () => {
+      mockSend.mockResolvedValue({ Body: new Readable({ read() {} }) });
+
+      await service.downloadWindowsAgent();
+
+      const key = (mockSend.mock.calls[0][0] as { Key: string }).Key;
+      expect(key).toBe('device-agent/production/windows/latest-setup.exe');
+      expect(key).not.toMatch(/\d+\.\d+\.\d+/);
     });
 
     it('should throw NotFoundException when S3 returns no body', async () => {
@@ -252,7 +277,7 @@ describe('DeviceAgentService', () => {
         NotFoundException,
       );
       await expect(service.downloadWindowsAgent()).rejects.toThrow(
-        'Windows agent executable file not found in S3',
+        'Windows agent file not found in S3',
       );
     });
 
