@@ -15,6 +15,33 @@ import { Readable } from 'stream';
 const S3_ENV = process.env.DEVICE_AGENT_S3_ENV || 'production';
 const S3_UPDATES_PREFIX = `device-agent/${S3_ENV}/updates`;
 
+/**
+ * Installer downloads resolve to the `latest-*` aliases the release pipeline
+ * rewrites on every publish, under the same `device-agent/<env>/` prefix the
+ * updates feed already uses.
+ *
+ * These previously pointed at a hardcoded, version-stamped filename
+ * ("Comp AI Agent-1.0.0-arm64.dmg") sitting at the bucket root. Both parts
+ * were wrong: nothing publishes to the root, and pinning a version means the
+ * download serves a stale build — or 404s — the moment a new agent ships.
+ */
+const INSTALLER_TARGETS = {
+  mac: {
+    key: `device-agent/${S3_ENV}/macos/latest-arm64.dmg`,
+    filename: 'CompAI-Device-Agent-arm64.dmg',
+    contentType: 'application/x-apple-diskimage',
+    label: 'macOS',
+  },
+  windows: {
+    key: `device-agent/${S3_ENV}/windows/latest-setup.exe`,
+    filename: 'CompAI-Device-Agent-setup.exe',
+    contentType: 'application/octet-stream',
+    label: 'Windows',
+  },
+} as const;
+
+type InstallerPlatform = keyof typeof INSTALLER_TARGETS;
+
 const ALLOWED_EXTENSIONS = new Set([
   '.yml',
   '.zip',
@@ -82,53 +109,52 @@ export class DeviceAgentService {
     });
   }
 
-  async downloadMacAgent(): Promise<{
+  private async downloadInstaller(platform: InstallerPlatform): Promise<{
     stream: Readable;
     filename: string;
     contentType: string;
   }> {
+    const { key, filename, contentType, label } = INSTALLER_TARGETS[platform];
+
     try {
-      const macosPackageFilename = 'Comp AI Agent-1.0.0-arm64.dmg';
-      const packageKey = `macos/${macosPackageFilename}`;
+      this.logger.log(`Downloading ${label} agent from S3: ${key}`);
 
-      this.logger.log(`Downloading macOS agent from S3: ${packageKey}`);
-
-      const getObjectCommand = new GetObjectCommand({
-        Bucket: this.fleetBucketName,
-        Key: packageKey,
-      });
-
-      const s3Response = await this.s3Client.send(getObjectCommand);
-
-      if (!s3Response.Body) {
-        throw new NotFoundException('macOS agent DMG file not found in S3');
-      }
-
-      // Use S3 stream directly as Node.js Readable
-      const s3Stream = s3Response.Body as Readable;
-
-      this.logger.log(
-        `Successfully retrieved macOS agent: ${macosPackageFilename}`,
+      const s3Response = await this.s3Client.send(
+        new GetObjectCommand({ Bucket: this.fleetBucketName, Key: key }),
       );
 
+      if (!s3Response.Body) {
+        throw new NotFoundException(`${label} agent file not found in S3`);
+      }
+
+      this.logger.log(`Successfully retrieved ${label} agent: ${filename}`);
+
       return {
-        stream: s3Stream,
-        filename: macosPackageFilename,
-        contentType: 'application/x-apple-diskimage',
+        stream: s3Response.Body as Readable,
+        filename,
+        contentType,
       };
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      this.logger.error('Failed to download macOS agent from S3:', error);
+      this.logger.error(`Failed to download ${label} agent from S3:`, error);
       const s3Error = error as { name?: string };
       if (s3Error.name === 'NoSuchKey' || s3Error.name === 'NotFound') {
-        throw new NotFoundException('macOS agent file not found');
+        throw new NotFoundException(`${label} agent file not found`);
       }
       throw new InternalServerErrorException(
-        'Failed to download macOS agent. The agent file may not be available in this environment.',
+        `Failed to download ${label} agent. The agent file may not be available in this environment.`,
       );
     }
+  }
+
+  async downloadMacAgent(): Promise<{
+    stream: Readable;
+    filename: string;
+    contentType: string;
+  }> {
+    return this.downloadInstaller('mac');
   }
 
   async downloadWindowsAgent(): Promise<{
@@ -136,50 +162,7 @@ export class DeviceAgentService {
     filename: string;
     contentType: string;
   }> {
-    try {
-      const windowsPackageFilename = 'Comp AI Agent 1.0.0.exe';
-      const packageKey = `windows/${windowsPackageFilename}`;
-
-      this.logger.log(`Downloading Windows agent from S3: ${packageKey}`);
-
-      const getObjectCommand = new GetObjectCommand({
-        Bucket: this.fleetBucketName,
-        Key: packageKey,
-      });
-
-      const s3Response = await this.s3Client.send(getObjectCommand);
-
-      if (!s3Response.Body) {
-        throw new NotFoundException(
-          'Windows agent executable file not found in S3',
-        );
-      }
-
-      // Use S3 stream directly as Node.js Readable
-      const s3Stream = s3Response.Body as Readable;
-
-      this.logger.log(
-        `Successfully retrieved Windows agent: ${windowsPackageFilename}`,
-      );
-
-      return {
-        stream: s3Stream,
-        filename: windowsPackageFilename,
-        contentType: 'application/octet-stream',
-      };
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      this.logger.error('Failed to download Windows agent from S3:', error);
-      const s3Error = error as { name?: string };
-      if (s3Error.name === 'NoSuchKey' || s3Error.name === 'NotFound') {
-        throw new NotFoundException('Windows agent file not found');
-      }
-      throw new InternalServerErrorException(
-        'Failed to download Windows agent. The agent file may not be available in this environment.',
-      );
-    }
+    return this.downloadInstaller('windows');
   }
 
   async getUpdateFile({
