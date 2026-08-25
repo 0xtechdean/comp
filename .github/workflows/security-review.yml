@@ -19,16 +19,22 @@ jobs:
     # Forks and clones have no ANTHROPIC_API_KEY, and the action exits 1 when the
     # key is empty — which reported every PR as failing a security review that had
     # never actually run. Skip cleanly instead, so a red X means "found something"
-    # rather than "not configured". `secrets` is unavailable in a step-level `if:`,
-    # so the check lives at job level where the context is allowed.
-    if: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+    # rather than "not configured".
+    #
+    # The gate MUST live on the steps, not the job: the `secrets` context is not
+    # allowed in a job-level `if:` (only github/needs/vars/inputs are), and a
+    # job-level check makes the whole workflow file invalid — GitHub then stamps
+    # a failed zero-job run on every push, and the review never runs on PRs
+    # either. Step-level `if:` is where `secrets` is available.
     steps:
       - uses: actions/checkout@v4
+        if: ${{ secrets.ANTHROPIC_API_KEY != '' }}
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 2
       # TODO: pin to a release SHA for supply-chain safety once a tag is chosen.
       - uses: anthropics/claude-code-security-review@main
+        if: ${{ secrets.ANTHROPIC_API_KEY != '' }}
         with:
           comment-pr: true
           claude-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
