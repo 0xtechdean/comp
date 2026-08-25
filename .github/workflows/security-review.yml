@@ -16,6 +16,12 @@ permissions:
 jobs:
   security-review:
     runs-on: ubuntu-latest
+    # Forks and clones have no ANTHROPIC_API_KEY, and the action exits 1 when the
+    # key is empty — which reported every PR as failing a security review that had
+    # never actually run. Skip cleanly instead, so a red X means "found something"
+    # rather than "not configured". `secrets` is unavailable in a step-level `if:`,
+    # so the check lives at job level where the context is allowed.
+    if: ${{ secrets.ANTHROPIC_API_KEY != '' }}
     steps:
       - uses: actions/checkout@v4
         with:

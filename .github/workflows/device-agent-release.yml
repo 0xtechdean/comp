@@ -122,16 +122,30 @@ jobs:
           AGENT_VERSION: ${{ needs.detect-version.outputs.version }}
         run: bun run build
 
+      # An unset secret expands to an empty string, and electron-builder treats
+      # CSC_LINK="" as a certificate path: path.resolve(projectDir, "") is the
+      # package directory, so signing failed with "<pkg dir> not a file" rather
+      # than falling back to an unsigned build. Only export the signing vars
+      # when a certificate is actually configured.
       - name: Package macOS
         env:
-          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          MAC_CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AUTO_UPDATE_URL: ${{ needs.detect-version.outputs.auto_update_url }}
-        run: bun run package:mac
+        run: |
+          if [ -n "$MAC_CSC_LINK" ]; then
+            echo "Signing certificate configured — building signed."
+            export CSC_LINK="$MAC_CSC_LINK"
+            export CSC_KEY_PASSWORD="$MAC_CSC_KEY_PASSWORD"
+          else
+            echo "::warning::MAC_CSC_LINK is not set — producing an UNSIGNED macOS build."
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+          fi
+          bun run package:mac
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
@@ -187,13 +201,37 @@ jobs:
           AUTO_UPDATE_URL: ${{ needs.detect-version.outputs.auto_update_url }}
         run: bun run package:win
 
+      # `secrets` is not a valid context in a step-level `if:`, so presence is
+      # resolved here into an output the later steps can gate on.
+      - name: Check for signing credentials
+        id: signing
+        shell: bash
+        env:
+          ESIGNER_USERNAME: ${{ secrets.ESIGNER_USERNAME }}
+          ESIGNER_PASSWORD: ${{ secrets.ESIGNER_PASSWORD }}
+          ESIGNER_CREDENTIAL_ID: ${{ secrets.ESIGNER_CREDENTIAL_ID }}
+          ESIGNER_TOTP_SECRET: ${{ secrets.ESIGNER_TOTP_SECRET }}
+        run: |
+          if [ -n "$ESIGNER_USERNAME" ] && [ -n "$ESIGNER_PASSWORD" ] \
+            && [ -n "$ESIGNER_CREDENTIAL_ID" ] && [ -n "$ESIGNER_TOTP_SECRET" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::ESIGNER secrets are not configured — producing an UNSIGNED Windows build."
+          fi
+
       - name: Setup Java for CodeSignTool
+        if: steps.signing.outputs.configured == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: 'corretto'
           java-version: '11'
 
+      # Skipped rather than fatal when the ESIGNER secrets are absent (forks,
+      # and any repo without SSL.com credentials), so the build still produces
+      # an unsigned installer. The verify step below is gated in lockstep.
       - name: Sign Windows EXE with SSL.com CodeSignTool
+        if: steps.signing.outputs.configured == 'true'
         shell: powershell
         working-directory: packages/device-agent/release
         env:
@@ -202,9 +240,6 @@ jobs:
           ESIGNER_CREDENTIAL_ID: ${{ secrets.ESIGNER_CREDENTIAL_ID }}
           ESIGNER_TOTP_SECRET: ${{ secrets.ESIGNER_TOTP_SECRET }}
         run: |
-          if (-not $env:ESIGNER_USERNAME -or -not $env:ESIGNER_PASSWORD -or -not $env:ESIGNER_CREDENTIAL_ID -or -not $env:ESIGNER_TOTP_SECRET) {
-            throw "One or more ESIGNER secrets are not configured. Cannot sign."
-          }
 
           Invoke-WebRequest -Uri "https://github.com/SSLcom/CodeSignTool/releases/download/v1.3.0/CodeSignTool-v1.3.0-windows.zip" -OutFile "codesigntool.zip"
           Expand-Archive -Path "codesigntool.zip" -DestinationPath "codesigntool"
@@ -232,6 +267,7 @@ jobs:
           }
 
       - name: Verify Windows code signature
+        if: steps.signing.outputs.configured == 'true'
         shell: powershell
         working-directory: packages/device-agent/release
         run: |
@@ -251,11 +287,13 @@ jobs:
           if (-not $allSigned) { throw "One or more .exe files are NOT properly signed. Failing build." }
 
       - name: Recalculate latest.yml hash after signing
+        if: steps.signing.outputs.configured == 'true'
         shell: bash
         working-directory: packages/device-agent/release
         run: |
           # Code signing changed the exe, so the sha512 in latest.yml is now wrong.
-          # Recalculate it from the signed binary.
+          # Recalculate it from the signed binary. Only runs when signing ran —
+          # electron-builder's own hash is already correct for an unsigned exe.
           EXE_FILE=$(ls *.exe | head -1)
           if [ -z "$EXE_FILE" ]; then
             echo "ERROR: No .exe found in release/"
