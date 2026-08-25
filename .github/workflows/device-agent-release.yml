@@ -6,6 +6,11 @@ on:
     branches: ['**']
     paths:
       - 'packages/device-agent/**'
+      # This file is included so that changes to the build/signing/release steps
+      # are exercised by the pipeline they alter. Without it a workflow-only
+      # commit never re-runs, and a fix here can look verified while the last
+      # red (or green) result actually came from an earlier commit.
+      - '.github/workflows/device-agent-release.yml'
 
 permissions:
   contents: write
