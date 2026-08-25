@@ -1,6 +1,9 @@
 import { randomUUID } from 'node:crypto';
+import { Logger } from '@nestjs/common';
 import { db } from '@db';
 import { RegisterDeviceDto } from './dto/register-device.dto';
+
+const logger = new Logger('DeviceRegistration');
 
 interface MemberRef {
   id: string;
@@ -41,6 +44,24 @@ export async function registerWithSerial({
   });
 
   if (existing && existing.memberId !== member.id) {
+    // Same physical device, different member. The row is NOT reassigned: doing
+    // so would let anyone re-register a colleague's machine under their own
+    // login and inherit its compliance history. Instead a synthetic serial is
+    // minted so both rows can coexist under the per-org serial unique
+    // constraint.
+    //
+    // The cost is that the two rows look like an unexplained duplicate, and the
+    // older one goes stale forever because no agent reports to it any more.
+    // Logging the collision makes the cause recoverable — usually one human
+    // holding two member identities, which is the thing actually worth fixing.
+    logger.warn(
+      `Device serial collision: serial=${dto.serialNumber} host=${dto.hostname} ` +
+        `is registered to member=${existing.memberId} but was re-registered by ` +
+        `member=${member.id} (org=${dto.organizationId}). Creating a separate ` +
+        `record with a fallback serial. If these are the same person, ` +
+        `consolidate the member identities — device ${existing.id} will go ` +
+        `stale but still appear in the device register.`,
+    );
     return handleFallbackSerial({ member, dto });
   }
 
@@ -117,6 +138,12 @@ async function handleFallbackSerial({
   }
 
   const fallbackSerial = `fallback:${dto.serialNumber}:${randomUUID()}`;
+
+  logger.warn(
+    `Creating duplicate device record for host=${dto.hostname} under ` +
+      `member=${member.id} with synthetic serial ${fallbackSerial}. The ` +
+      `hardware serial ${dto.serialNumber} belongs to another member's record.`,
+  );
 
   return db.device.create({
     data: {

@@ -9,6 +9,7 @@ jest.mock('@db', () => ({
   },
 }));
 
+import { Logger } from '@nestjs/common';
 import { db } from '@db';
 import {
   registerWithSerial,
@@ -179,6 +180,88 @@ describe('registerWithoutSerial — unchanged behavior', () => {
       where: { id: 'dev_null' },
       data: expect.any(Object),
     });
+    expect(mockDb.device.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('registerWithSerial — serial collision across members', () => {
+  let warnSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
+  // A device already claimed by another member must NOT be reassigned —
+  // otherwise re-registering a colleague's laptop under your own login would
+  // silently transfer its compliance history.
+  it('does not reassign a device owned by a different member', async () => {
+    (mockDb.device.findUnique as jest.Mock).mockResolvedValue({
+      id: 'dev_other',
+      memberId: 'mem_someone_else',
+    });
+    (mockDb.device.findFirst as jest.Mock).mockResolvedValue(null);
+    (mockDb.device.create as jest.Mock).mockResolvedValue({ id: 'dev_new' });
+
+    await registerWithSerial({ member, dto: makeDto() });
+
+    expect(mockDb.device.update).not.toHaveBeenCalled();
+    expect(mockDb.device.create).toHaveBeenCalledTimes(1);
+    const created = (mockDb.device.create as jest.Mock).mock.calls[0][0].data;
+    expect(created.memberId).toBe(member.id);
+    expect(created.serialNumber).toMatch(/^fallback:ABC123:/);
+  });
+
+  it('logs the collision so the duplicate row has a recoverable cause', async () => {
+    (mockDb.device.findUnique as jest.Mock).mockResolvedValue({
+      id: 'dev_other',
+      memberId: 'mem_someone_else',
+    });
+    (mockDb.device.findFirst as jest.Mock).mockResolvedValue(null);
+    (mockDb.device.create as jest.Mock).mockResolvedValue({ id: 'dev_new' });
+
+    await registerWithSerial({ member, dto: makeDto() });
+
+    const messages = warnSpy.mock.calls.map((c) => String(c[0]));
+    expect(messages.some((m) => m.includes('serial collision'))).toBe(true);
+    expect(messages.some((m) => m.includes('mem_someone_else'))).toBe(true);
+    expect(messages.some((m) => m.includes('ABC123'))).toBe(true);
+  });
+
+  it('reuses an existing fallback row instead of creating another one', async () => {
+    (mockDb.device.findUnique as jest.Mock).mockResolvedValue({
+      id: 'dev_other',
+      memberId: 'mem_someone_else',
+    });
+    (mockDb.device.findFirst as jest.Mock).mockResolvedValue({
+      id: 'dev_fallback_existing',
+    });
+    (mockDb.device.update as jest.Mock).mockResolvedValue({
+      id: 'dev_fallback_existing',
+    });
+
+    await registerWithSerial({ member, dto: makeDto() });
+
+    expect(mockDb.device.create).not.toHaveBeenCalled();
+    expect(mockDb.device.update).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'dev_fallback_existing' } }),
+    );
+  });
+
+  it('stays silent when the same member re-registers their own device', async () => {
+    (mockDb.device.findUnique as jest.Mock).mockResolvedValue({
+      id: 'dev_mine',
+      memberId: member.id,
+    });
+    (mockDb.device.update as jest.Mock).mockResolvedValue({ id: 'dev_mine' });
+
+    await registerWithSerial({ member, dto: makeDto() });
+
+    expect(warnSpy).not.toHaveBeenCalled();
     expect(mockDb.device.create).not.toHaveBeenCalled();
   });
 });
