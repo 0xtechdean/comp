@@ -1,4 +1,3 @@
-import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import type { CheckResult } from '../../shared/types';
 import type { ComplianceCheck } from '../types';
@@ -20,20 +19,40 @@ export class MacOSAntivirusCheck implements ComplianceCheck {
     '/System/Library/CoreServices/XProtect.bundle',
   ];
 
-  private static readonly KNOWN_AV_PROCESSES = [
-    'MalwareBytes',
-    'Sophos',
-    'CrowdStrike',
-    'SentinelOne',
-    'Norton',
-    'McAfee',
-    'Avast',
-    'AVG',
-    'Kaspersky',
-    'ESET',
-    'Bitdefender',
-    'Trend Micro',
-    'Webroot',
+  /**
+   * Vendors are matched against install paths, not raw `ps aux` text.
+   *
+   * Substring-matching process output produces false positives: short vendor
+   * names collide with unrelated command-line arguments (e.g. "ESET" matches
+   * "PRE**SET**S" and "--pseudonymization-**set**..." on a stock Mac), which
+   * silently misreports which product is installed. Paths are unambiguous.
+   */
+  private static readonly KNOWN_AV_VENDORS: ReadonlyArray<{
+    name: string;
+    paths: readonly string[];
+  }> = [
+    { name: 'Bitdefender', paths: ['/Library/Bitdefender', '/Applications/Bitdefender'] },
+    { name: 'CrowdStrike', paths: ['/Applications/Falcon.app', '/Library/CS'] },
+    { name: 'SentinelOne', paths: ['/Applications/SentinelOne', '/Library/Sentinel'] },
+    { name: 'Sophos', paths: ['/Applications/Sophos', '/Library/Sophos Anti-Virus'] },
+    { name: 'MalwareBytes', paths: ['/Applications/Malwarebytes.app'] },
+    {
+      name: 'ESET',
+      paths: ['/Applications/ESET Endpoint Security.app', '/Library/Application Support/ESET'],
+    },
+    { name: 'Norton', paths: ['/Applications/Norton 360.app', '/Applications/Symantec Solutions'] },
+    {
+      name: 'McAfee',
+      paths: ['/Applications/McAfee Endpoint Security for Mac.app', '/Library/McAfee'],
+    },
+    {
+      name: 'Kaspersky',
+      paths: ['/Applications/Kaspersky.app', '/Library/Application Support/Kaspersky Lab'],
+    },
+    { name: 'Avast', paths: ['/Applications/Avast.app'] },
+    { name: 'AVG', paths: ['/Applications/AVG AntiVirus.app'] },
+    { name: 'Trend Micro', paths: ['/Applications/Trend Micro Security.app'] },
+    { name: 'Webroot', paths: ['/Applications/Webroot SecureAnywhere.app'] },
   ];
 
   async run(): Promise<CheckResult> {
@@ -41,19 +60,13 @@ export class MacOSAntivirusCheck implements ComplianceCheck {
       // Check XProtect
       const xprotectExists = MacOSAntivirusCheck.XPROTECT_PATHS.some((p) => existsSync(p));
 
-      // Check for third-party AV by looking at running processes
-      let thirdPartyAV: string | null = null;
-      try {
-        const processes = execSync('ps aux', { encoding: 'utf-8', timeout: 10000 });
-        for (const av of MacOSAntivirusCheck.KNOWN_AV_PROCESSES) {
-          if (processes.toLowerCase().includes(av.toLowerCase())) {
-            thirdPartyAV = av;
-            break;
-          }
-        }
-      } catch {
-        // ps aux failure is non-critical
-      }
+      // Detect third-party AV by install path. Report every vendor found rather
+      // than only the first, so a machine mid-migration between products is not
+      // silently reported as running just one of them.
+      const detectedAV = MacOSAntivirusCheck.KNOWN_AV_VENDORS.filter((vendor) =>
+        vendor.paths.some((p) => existsSync(p)),
+      ).map((vendor) => vendor.name);
+      const thirdPartyAV = detectedAV.length > 0 ? detectedAV.join(', ') : null;
 
       const passed = xprotectExists;
       const details: string[] = [];
@@ -72,7 +85,7 @@ export class MacOSAntivirusCheck implements ComplianceCheck {
         checkType: this.checkType,
         passed,
         details: {
-          method: 'xprotect-bundle-check + process-scan',
+          method: 'xprotect-bundle-check + install-path-scan',
           raw: JSON.stringify({ xprotectExists, thirdPartyAV }),
           message: details.join('. '),
         },
