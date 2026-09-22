@@ -12,46 +12,46 @@
 -- generic key is removed only after confirming the copy matches, so this is
 -- idempotent and safe to re-run.
 --
--- `whistleblower_report` and `tabletop_exercise` declare a field genuinely
+-- `whistleblower-report` and `tabletop-exercise` declare a field genuinely
 -- called `evidenceFile`, and the form types with no file field at all
 -- (meetings, access requests, matrices) rely on the fallback row. Both are
 -- left untouched.
 
--- penetration_test -> pentestReport
+-- penetration-test -> pentestReport
 UPDATE "EvidenceSubmission"
 SET "data" = jsonb_set("data", '{pentestReport}', "data" -> 'evidenceFile')
-WHERE "formType" = 'penetration_test'
+WHERE "formType" = 'penetration-test'
   AND "data" ? 'evidenceFile'
   AND NOT ("data" ? 'pentestReport');
 
 UPDATE "EvidenceSubmission"
 SET "data" = "data" - 'evidenceFile'
-WHERE "formType" = 'penetration_test'
+WHERE "formType" = 'penetration-test'
   AND "data" ? 'evidenceFile'
   AND "data" -> 'evidenceFile' = "data" -> 'pentestReport';
 
--- network_diagram -> diagramFile
+-- network-diagram -> diagramFile
 UPDATE "EvidenceSubmission"
 SET "data" = jsonb_set("data", '{diagramFile}', "data" -> 'evidenceFile')
-WHERE "formType" = 'network_diagram'
+WHERE "formType" = 'network-diagram'
   AND "data" ? 'evidenceFile'
   AND NOT ("data" ? 'diagramFile');
 
 UPDATE "EvidenceSubmission"
 SET "data" = "data" - 'evidenceFile'
-WHERE "formType" = 'network_diagram'
+WHERE "formType" = 'network-diagram'
   AND "data" ? 'evidenceFile'
   AND "data" -> 'evidenceFile' = "data" -> 'diagramFile';
 
--- rbac_matrix -> matrixFile
+-- rbac-matrix -> matrixFile
 UPDATE "EvidenceSubmission"
 SET "data" = jsonb_set("data", '{matrixFile}', "data" -> 'evidenceFile')
-WHERE "formType" = 'rbac_matrix'
+WHERE "formType" = 'rbac-matrix'
   AND "data" ? 'evidenceFile'
   AND NOT ("data" ? 'matrixFile');
 
 UPDATE "EvidenceSubmission"
 SET "data" = "data" - 'evidenceFile'
-WHERE "formType" = 'rbac_matrix'
+WHERE "formType" = 'rbac-matrix'
   AND "data" ? 'evidenceFile'
   AND "data" -> 'evidenceFile' = "data" -> 'matrixFile';
