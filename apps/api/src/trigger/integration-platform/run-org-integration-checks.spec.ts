@@ -1,25 +1,8 @@
 const mockDb = {
   task: { findMany: jest.fn() },
-  member: { findMany: jest.fn() },
 };
 
 jest.mock('@db', () => ({ db: mockDb }));
-
-const isUserUnsubscribedMock = jest.fn().mockResolvedValue(false);
-jest.mock('@trycompai/email', () => ({
-  isUserUnsubscribed: (...args: unknown[]) => isUserUnsubscribedMock(...args),
-}));
-
-const triggerEmailMock = jest.fn().mockResolvedValue({ id: 'email_1' });
-jest.mock('../../email/trigger-email', () => ({
-  triggerEmail: (...args: unknown[]) => triggerEmailMock(...args),
-}));
-
-// Return the props so tests can inspect the bundled task list passed to the
-// email template.
-jest.mock('../../email/templates/automation-bulk-failures', () => ({
-  AutomationBulkFailuresEmail: (props: unknown) => ({ __email: 'bulk', props }),
-}));
 
 // Importing the runner evaluates queue()/task() at module load — stub them.
 // runTaskIntegrationChecks is only referenced inside the task body (not load).
@@ -31,24 +14,15 @@ jest.mock('@trigger.dev/sdk', () => ({
 jest.mock('./run-task-integration-checks', () => ({
   runTaskIntegrationChecks: { batchTriggerAndWait: jest.fn() },
 }));
+jest.mock('./org-failure-email', () => ({
+  sendBundledFailureEmails: jest.fn(),
+}));
 
 import {
-  collectFailedTasks,
-  sendBundledFailureEmails,
-  type FailedTaskSummary,
+  collectFailureCounts,
+  findCurrentlyFailedTasks,
 } from './run-org-integration-checks';
 import type { TaskCheckRunResult } from './run-task-integration-checks';
-
-function recipientEmails(): string[] {
-  return triggerEmailMock.mock.calls.map((call) => call[0].to as string);
-}
-
-function emailedTaskTitles(callIndex = 0): string[] {
-  const react = triggerEmailMock.mock.calls[callIndex][0].react as {
-    props: { tasks: Array<{ title: string }> };
-  };
-  return react.props.tasks.map((t) => t.title);
-}
 
 const okRun = (
   output: Partial<Extract<TaskCheckRunResult, { success: true }>> & {
@@ -70,131 +44,85 @@ const okRun = (
   },
 });
 
-describe('collectFailedTasks', () => {
-  it('keeps only ok + success + freshly-transitioned-to-failed runs', () => {
-    const failed = collectFailedTasks([
-      okRun({ taskId: 't1', taskTitle: 'Task 1', failedCount: 2, totalCount: 9 }),
-      // success but NOT a fresh transition (already failed) → dropped
-      okRun({ taskId: 't2', statusChangedToFailed: false }),
-      // child run errored/crashed → dropped
+describe('collectFailureCounts', () => {
+  it('counts failing runs whether or not they transitioned, dropping errored and passing runs', () => {
+    const counts = collectFailureCounts([
+      okRun({ taskId: 't1', failedCount: 2, totalCount: 9 }),
+      // Already failed before this run — still counted (the old digest dropped it).
+      okRun({
+        taskId: 't2',
+        statusChangedToFailed: false,
+        failedCount: 6,
+        totalCount: 7,
+      }),
+      okRun({ taskId: 't3', taskStatus: 'done', statusChangedToFailed: false }),
       { ok: false },
-      // child returned a failure result → dropped
-      { ok: true, output: { success: false, taskId: 't3', error: 'boom' } },
+      { ok: true, output: { success: false, taskId: 't4', error: 'boom' } },
     ]);
 
-    expect(failed).toEqual([
-      { taskId: 't1', taskTitle: 'Task 1', failedCount: 2, totalCount: 9 },
-    ]);
+    expect(Object.fromEntries(counts)).toEqual({
+      t1: { failedCount: 2, totalCount: 9 },
+      t2: { failedCount: 6, totalCount: 7 },
+    });
   });
 
-  it('returns [] when nothing failed', () => {
-    expect(
-      collectFailedTasks([okRun({ taskId: 't1', statusChangedToFailed: false })]),
-    ).toEqual([]);
+  it('sums counts for a task checked over several connections and across batches', () => {
+    const counts = collectFailureCounts([
+      okRun({ taskId: 't1', failedCount: 1, totalCount: 1 }),
+    ]);
+    collectFailureCounts(
+      [okRun({ taskId: 't1', failedCount: 2, totalCount: 5 })],
+      counts,
+    );
+
+    expect(counts.get('t1')).toEqual({ failedCount: 3, totalCount: 6 });
   });
 });
 
-describe('sendBundledFailureEmails', () => {
-  const failedTasks: FailedTaskSummary[] = [
-    { taskId: 't1', taskTitle: 'Task 1', failedCount: 2, totalCount: 10 },
-    { taskId: 't2', taskTitle: 'Task 2', failedCount: 1, totalCount: 5 },
-  ];
+describe('findCurrentlyFailedTasks', () => {
+  beforeEach(() => jest.clearAllMocks());
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    isUserUnsubscribedMock.mockResolvedValue(false);
-    // Assignee of t1; t2 unassigned.
+  it('reports every task that is failed in the DB, including ones that were already failed', async () => {
     mockDb.task.findMany.mockResolvedValue([
-      { assignee: { user: { id: 'u_assignee', name: 'Ann', email: 'ann@x.com' } } },
-      { assignee: null },
+      { id: 't2', title: 'Secure Code' },
+      { id: 't5', title: 'Errored Child' },
     ]);
-    // admin + owner + an employee (excluded) + a substring-only custom role
-    // (must be excluded by EXACT token matching) + the assignee again (deduped).
-    mockDb.member.findMany.mockResolvedValue([
-      { role: 'admin', user: { id: 'u_admin', name: 'Adam', email: 'adam@x.com' } },
-      { role: 'owner', user: { id: 'u_owner', name: 'Oli', email: 'oli@x.com' } },
-      { role: 'employee', user: { id: 'u_emp', name: 'Eve', email: 'eve@x.com' } },
-      { role: 'co-owner', user: { id: 'u_sub', name: 'Sub', email: 'sub@x.com' } },
+
+    const failed = await findCurrentlyFailedTasks({
+      organizationId: 'org1',
+      taskIds: ['t1', 't2', 't5'],
+      counts: new Map([['t2', { failedCount: 6, totalCount: 7 }]]),
+    });
+
+    expect(mockDb.task.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: { in: ['t1', 't2', 't5'] },
+          organizationId: 'org1',
+          status: 'failed',
+        },
+      }),
+    );
+    expect(failed).toEqual([
+      { taskId: 't2', taskTitle: 'Secure Code', failedCount: 6, totalCount: 7 },
+      // No failing child output (e.g. the child errored) → zero counts, still reported.
       {
-        role: 'admin,auditor',
-        user: { id: 'u_assignee', name: 'Ann', email: 'ann@x.com' },
+        taskId: 't5',
+        taskTitle: 'Errored Child',
+        failedCount: 0,
+        totalCount: 0,
       },
     ]);
   });
 
-  it('sends ONE bundled email per recipient (assignees ∪ admins/owners, deduped)', async () => {
-    await sendBundledFailureEmails({
-      organizationId: 'org1',
-      organizationName: 'Acme',
-      failedTasks,
-    });
-
-    // assignee + admin + owner; employee + substring-only "co-owner" excluded;
-    // assignee not double-sent.
-    expect(recipientEmails().sort()).toEqual(
-      ['adam@x.com', 'ann@x.com', 'oli@x.com'].sort(),
-    );
-    // EXACT-token matching: "co-owner" must NOT be treated as owner.
-    expect(recipientEmails()).not.toContain('sub@x.com');
-    // Every recipient gets the FULL list of failed tasks.
-    expect(emailedTaskTitles(0)).toEqual(['Task 1', 'Task 2']);
-    expect(triggerEmailMock.mock.calls[0][0].subject).toBe(
-      '2 tasks failed automated checks in Acme',
-    );
-  });
-
-  it('queries members WITHOUT a platform user.role filter (notifies admin/owner regardless of platform role)', async () => {
-    await sendBundledFailureEmails({
-      organizationId: 'org1',
-      organizationName: 'Acme',
-      failedTasks,
-    });
-
-    expect(mockDb.member.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { organizationId: 'org1', deactivated: false },
-      }),
-    );
-  });
-
-  it('skips unsubscribed recipients', async () => {
-    isUserUnsubscribedMock.mockImplementation(
-      (_db, email: string) => Promise.resolve(email === 'adam@x.com'),
-    );
-
-    await sendBundledFailureEmails({
-      organizationId: 'org1',
-      organizationName: 'Acme',
-      failedTasks,
-    });
-
-    expect(recipientEmails().sort()).toEqual(['ann@x.com', 'oli@x.com'].sort());
-  });
-
-  it('sends nothing when there are no failed tasks', async () => {
-    await sendBundledFailureEmails({
-      organizationId: 'org1',
-      organizationName: 'Acme',
-      failedTasks: [],
-    });
-
-    expect(triggerEmailMock).not.toHaveBeenCalled();
-    expect(mockDb.task.findMany).not.toHaveBeenCalled();
-  });
-
-  it('swallows a recipient-resolution failure (best-effort) instead of throwing', async () => {
-    // A DB blip here must NOT propagate out of the runner — otherwise the whole
-    // org run would fail and retry, and the email would be lost permanently.
-    mockDb.task.findMany.mockRejectedValue(new Error('db down'));
-
+  it('skips the query when there are no tasks', async () => {
     await expect(
-      sendBundledFailureEmails({
+      findCurrentlyFailedTasks({
         organizationId: 'org1',
-        organizationName: 'Acme',
-        failedTasks,
+        taskIds: [],
+        counts: new Map(),
       }),
-    ).resolves.toBeUndefined();
-
-    expect(triggerEmailMock).not.toHaveBeenCalled();
+    ).resolves.toEqual([]);
+    expect(mockDb.task.findMany).not.toHaveBeenCalled();
   });
 });
