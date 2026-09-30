@@ -3,7 +3,7 @@ import { runBrowserAutomation } from './run-browser-automation';
 import {
   sendBundledFailureEmails,
   type FailedTaskSummary,
-} from '../integration-platform/run-org-integration-checks';
+} from '../integration-platform/org-failure-email';
 
 /** One automation scheduled for an org, as handed down by the orchestrator. */
 export interface OrgBrowserAutomation {

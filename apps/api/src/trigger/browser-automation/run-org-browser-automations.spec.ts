@@ -9,7 +9,7 @@ jest.mock('@trigger.dev/sdk', () => ({
 jest.mock('./run-browser-automation', () => ({
   runBrowserAutomation: { batchTriggerAndWait: jest.fn() },
 }));
-jest.mock('../integration-platform/run-org-integration-checks', () => ({
+jest.mock('../integration-platform/org-failure-email', () => ({
   sendBundledFailureEmails: jest.fn(),
 }));
 

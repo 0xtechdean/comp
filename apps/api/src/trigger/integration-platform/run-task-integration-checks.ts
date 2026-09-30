@@ -473,9 +473,8 @@ export const runTaskIntegrationChecks = task({
       );
 
       // Whether THIS run flipped the task into `failed` (e.g. todo/done →
-      // failed). The per-org runner bundles only these transitions into one
-      // email, so a task that was already failed isn't re-reported every run —
-      // preserving the previous "only notify on transition" behavior.
+      // failed). Informational only: the per-org digest reads current task
+      // status from the DB so a task that stays red keeps being reported.
       let statusChangedToFailed = false;
 
       if (newStatus === 'failed') {
@@ -497,7 +496,7 @@ export const runTaskIntegrationChecks = task({
         statusChangedToFailed = oldStatus !== 'failed';
         if (!statusChangedToFailed) {
           logger.info(
-            `Task ${taskId} was already in failed status; not reporting it for the bundled email`,
+            `Task ${taskId} was already in failed status`,
           );
         }
       } else if (newStatus === 'done') {
@@ -560,8 +559,8 @@ export const runTaskIntegrationChecks = task({
         totalFindings,
         taskStatus: newStatus,
         // Consumed by the per-org bundled-failure email
-        // (run-org-integration-checks). `statusChangedToFailed` gates inclusion;
-        // failedCount/totalCount feed the "(X/Y failed)" line per task.
+        // (run-org-integration-checks): failedCount/totalCount feed the
+        // "(X/Y failed)" line per task.
         statusChangedToFailed,
         failedCount: effectiveFailures,
         totalCount: totalPassing + totalFindings,

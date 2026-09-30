@@ -94,7 +94,7 @@ export const AutomationBulkFailuresEmail = ({
                   <Link href={task.url} className="text-[#121212] underline">
                     {task.title}
                   </Link>
-                  {' '}({task.failedCount}/{task.totalCount} failed)
+                  {task.totalCount > 0 && ` (${task.failedCount}/${task.totalCount} failed)`}
                 </Text>
               ))}
               {remainingCount > 0 && (
