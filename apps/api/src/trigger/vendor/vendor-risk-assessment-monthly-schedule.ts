@@ -1,9 +1,14 @@
 import { db } from '@db';
 import { logger, schedules } from '@trigger.dev/sdk';
 import { vendorRiskAssessmentTask } from './vendor-risk-assessment-task';
+import {
+  REFRESH_SKIP_WINDOW_DAYS,
+  partitionVendorsDueForRefresh,
+} from './vendor-risk-assessment/refresh-due';
 
 /**
- * Monthly scheduled task that refreshes risk assessments for all vendors.
+ * Monthly scheduled task that refreshes risk assessments for all vendors,
+ * except those whose domain was researched within REFRESH_SKIP_WINDOW_DAYS.
  * Runs on the 1st of each month at 2:00 AM UTC.
  */
 export const vendorRiskAssessmentMonthlySchedule = schedules.task({
@@ -42,15 +47,37 @@ export const vendorRiskAssessmentMonthlySchedule = schedules.task({
       };
     }
 
-    // Process ALL vendors - monthly refresh for everyone
-    // This ensures all vendors get updated risk assessments monthly
-    logger.info(`Processing all ${vendors.length} vendors for monthly refresh`);
+    const cutoff = new Date(
+      Date.now() - REFRESH_SKIP_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+    );
+    const recentlyAssessed = await db.globalVendors.findMany({
+      where: { riskAssessmentUpdatedAt: { gte: cutoff } },
+      select: { website: true },
+    });
+    const { due, skipped } = partitionVendorsDueForRefresh({
+      vendors,
+      recentlyAssessedWebsites: recentlyAssessed.map((g) => g.website),
+    });
 
-    // Batch trigger risk assessment tasks with research enabled for ALL vendors
-    // This will:
+    logger.info(
+      `Refreshing ${due.length} vendor(s); skipping ${skipped.length} assessed in the last ${REFRESH_SKIP_WINDOW_DAYS} days`,
+      { skipped: skipped.map((v) => v.name) },
+    );
+
+    if (due.length === 0) {
+      return {
+        success: true,
+        totalVendors: vendors.length,
+        skipped: skipped.length,
+        triggered: 0,
+        message: 'All vendors were assessed recently',
+      };
+    }
+
+    // Batch trigger risk assessment tasks with research enabled:
     // - Create new assessments for vendors without data (v1)
     // - Refresh existing assessments and increment version (v1 -> v2, v2 -> v3, etc.)
-    const batch = vendors.map((vendor) => ({
+    const batch = due.map((vendor) => ({
       payload: {
         vendorId: vendor.id,
         vendorName: vendor.name,
@@ -71,6 +98,7 @@ export const vendorRiskAssessmentMonthlySchedule = schedules.task({
       return {
         success: true,
         totalVendors: vendors.length,
+        skipped: skipped.length,
         triggered: batch.length,
         message: `Triggered monthly refresh for ${batch.length} vendors`,
       };
@@ -83,6 +111,7 @@ export const vendorRiskAssessmentMonthlySchedule = schedules.task({
       return {
         success: false,
         totalVendors: vendors.length,
+        skipped: skipped.length,
         triggered: 0,
         error: error instanceof Error ? error.message : String(error),
       };
