@@ -25,6 +25,7 @@ import {
   getDefaultFrameworks,
 } from './vendor-risk-assessment/frameworks';
 import { vendorRiskAssessmentPayloadSchema } from './vendor-risk-assessment/schema';
+import { extractDomain } from './vendor-risk-assessment/refresh-due';
 
 const VERIFY_RISK_ASSESSMENT_TASK_TITLE = 'Verify risk assessment' as const;
 
@@ -292,29 +293,6 @@ function generateLogoUrl(website: string | null): string | null {
     const parsed = new URL(urlWithProtocol);
     const domain = parsed.hostname.replace(/^www\./, '');
     return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Extract domain from website URL for GlobalVendors lookup.
- * Removes www. prefix and returns just the domain (e.g., "example.com").
- */
-function extractDomain(website: string | null | undefined): string | null {
-  if (!website) return null;
-
-  const trimmed = website.trim();
-  if (!trimmed) return null;
-
-  try {
-    // Add protocol if missing to make URL parsing work
-    const urlString = /^https?:\/\//i.test(trimmed)
-      ? trimmed
-      : `https://${trimmed}`;
-    const url = new URL(urlString);
-    // Remove www. prefix and return just the domain
-    return url.hostname.toLowerCase().replace(/^www\./, '');
   } catch {
     return null;
   }
