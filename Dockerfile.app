@@ -16,7 +16,12 @@ WORKDIR /app
 
 # Prisma's query engine needs openssl/libssl at generate time; the bun
 # Debian-slim base ships without it, so install it before any prisma generate.
-RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
+# oven/bun:1.2.8 is Debian 11 (bullseye). Its LTS ended 2026-08 and the
+# bullseye-security mirror now lists package files it no longer serves, so
+# apt-get 404s. This stage is build-only (the shipped image is node:22), so
+# install from bullseye main instead.
+RUN sed -i '/bullseye-security/d' /etc/apt/sources.list \
+  && apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
 # Copy workspace configuration
