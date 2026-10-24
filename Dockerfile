@@ -10,8 +10,10 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
-# Copy workspace configuration
-COPY package.json bun.lock ./
+# Copy workspace configuration. bunfig.toml pins the hoisted linker; without it
+# bun 1.4 installs isolated (.bun/ store) and packages/auth's declaration
+# build fails with TS2742 on the zod types.
+COPY package.json bun.lock bunfig.toml ./
 
 # Copy package.json for ALL workspace packages so bun can resolve the full
 # workspace graph (apps/app + apps/portal depend transitively on db/auth/
