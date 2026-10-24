@@ -8,11 +8,12 @@
   "authConfig": {
     "type": "api_key",
     "config": {
-      "setupInstructions": "## Setup Iru (formerly Kandji) Integration\n\n1. Sign in to your Iru (formerly Kandji) admin console\n2. Go to **Settings** then **Access** then **API Token**\n3. Click **Add token** and give it a name like \"CompAI Integration\"\n4. Grant the token the **Device List** permission\n5. Copy the API token (it is only shown once)\n6. Note your Iru (formerly Kandji) subdomain from your URL (e.g. \"mycompany\" from mycompany.clients.us-1.kandji.io)\n7. Paste the API token and subdomain into CompAI"
+      "setupInstructions": "## Setup Iru (formerly Kandji) Integration\n\n1. Sign in to your Iru admin console\n2. Go to **Settings** -> **Access** -> **API Token**\n3. Click **Add Token**, give it a name like \"CompAI Integration\"\n4. Grant the token the **Device List** permission (read-only)\n5. Copy the API token (it is only shown once)\n6. Find your Iru API subdomain — it is the prefix in your API URL: `mycompany.api.kandji.io` -> subdomain is `mycompany`\n7. Paste the API token and the subdomain into CompAI"
     }
   },
   "capabilities": [
-    "checks"
+    "checks",
+    "device_sync"
   ],
   "supportsMultipleConnections": false,
   "syncSupported": false,

@@ -8,7 +8,7 @@
   "authConfig": {
     "type": "oauth2",
     "config": {
-      "setupInstructions": "1. Go to GitHub > Settings > Developer settings > OAuth Apps > New OAuth App\n2. Set Redirect URI to: https://api.trycomp.ai/v1/integrations/oauth/callback\n3. Request scopes: read:org, manage_billing:copilot\n4. Copy Client ID and Secret to Comp AI admin panel\n5. After connecting, enter your GitHub organization name",
+      "setupInstructions": "1. Go to GitHub > Settings > Developer settings > OAuth Apps > New OAuth App\n2. Set Redirect URI to: https://api.trycomp.ai/v1/integrations/oauth/callback\n3. Request scopes: read:org, manage_billing:copilot\n4. Copy Client ID and Secret to Comp AI admin panel\n5. After connecting, enter your GitHub organization name\n\nImportant: The user who connects this integration MUST be an organization owner, billing manager, or Copilot admin in GitHub. Other roles will receive HTTP 404 even with all required scopes granted.\n\nOrganization name: enter the bare GitHub org name (e.g. \"acme-corp\"), not the full URL.",
       "scopes": [
         "read:org",
         "manage_billing:copilot"

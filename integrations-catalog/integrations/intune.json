@@ -23,7 +23,8 @@
     }
   },
   "capabilities": [
-    "checks"
+    "checks",
+    "device_sync"
   ],
   "supportsMultipleConnections": false,
   "syncSupported": false,

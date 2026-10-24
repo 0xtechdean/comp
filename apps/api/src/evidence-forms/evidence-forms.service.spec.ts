@@ -40,6 +40,7 @@ jest.mock('@db', () => {
     db: {
       evidenceSubmission: {
         findFirst: jest.fn(),
+        findMany: jest.fn(),
         groupBy: jest.fn(),
         update: jest.fn(),
         create: jest.fn(),
@@ -55,6 +56,7 @@ jest.mock('@db', () => {
 type MockDb = {
   evidenceSubmission: {
     findFirst: jest.Mock;
+    findMany: jest.Mock;
     groupBy: jest.Mock;
     update: jest.Mock;
     create: jest.Mock;
@@ -76,9 +78,10 @@ describe('EvidenceFormsService', () => {
     userEmail: 'reviewer@example.com',
   };
 
+  const getPresignedDownloadUrlMock = jest.fn();
   const attachmentsServiceMock = {
     uploadToS3: jest.fn(),
-    getPresignedDownloadUrl: jest.fn(),
+    getPresignedDownloadUrl: getPresignedDownloadUrlMock,
   } as unknown as AttachmentsService;
 
   const timelinesServiceMock =
@@ -269,6 +272,167 @@ describe('EvidenceFormsService', () => {
     });
   });
 
+  describe('file field organization guard', () => {
+    const pentestPayload = (fileKey: string) => ({
+      submissionDate: '2026-01-01T00:00:00.000Z',
+      testDate: '2026-01-01',
+      vendorName: 'Acme Security',
+      summary: 'No critical findings',
+      pentestReport: {
+        fileName: 'report.pdf',
+        fileKey,
+        downloadUrl: 'https://example.com/stale-signed-url',
+      },
+    });
+
+    describe('submitForm', () => {
+      it("rejects a fileKey belonging to another organization's attachments", async () => {
+        await expect(
+          service.submitForm({
+            organizationId: 'org_123',
+            formType: 'penetration-test',
+            payload: pentestPayload(
+              'org_999/attachments/evidence-forms/penetration-test/evil.pdf',
+            ),
+            authContext,
+          }),
+        ).rejects.toThrow(
+          'Submitted file does not belong to this organization',
+        );
+
+        expect(mockedDb.evidenceSubmission.create).not.toHaveBeenCalled();
+      });
+
+      it("accepts a fileKey belonging to the caller's own organization", async () => {
+        const fileKey =
+          'org_123/attachments/evidence-forms/penetration-test/report.pdf';
+
+        mockedDb.evidenceSubmission.create.mockResolvedValue({
+          id: 'sub_pentest_1',
+          formType: 'penetration_test',
+          data: pentestPayload(fileKey),
+          submittedBy: {
+            id: 'usr_reviewer',
+            name: 'Jane Employee',
+            email: 'reviewer@example.com',
+          },
+        });
+
+        await expect(
+          service.submitForm({
+            organizationId: 'org_123',
+            formType: 'penetration-test',
+            payload: pentestPayload(fileKey),
+            authContext,
+          }),
+        ).resolves.toMatchObject({ id: 'sub_pentest_1' });
+      });
+    });
+
+    describe('getSubmission (refreshFileUrls)', () => {
+      it('does not presign a stored fileKey outside the organization and clears its download URL', async () => {
+        mockedDb.evidenceSubmission.findFirst.mockResolvedValue({
+          id: 'sub_pentest_2',
+          formType: 'penetration_test',
+          data: pentestPayload(
+            'org_999/attachments/evidence-forms/penetration-test/evil.pdf',
+          ),
+          submittedBy: null,
+          reviewedBy: null,
+        });
+
+        const result = await service.getSubmission({
+          organizationId: 'org_123',
+          authContext,
+          formType: 'penetration-test',
+          submissionId: 'sub_pentest_2',
+        });
+
+        expect(getPresignedDownloadUrlMock).not.toHaveBeenCalled();
+        expect(result.submission.data).toMatchObject({
+          pentestReport: { downloadUrl: null },
+        });
+      });
+
+      it("presigns a stored fileKey that belongs to the caller's organization", async () => {
+        getPresignedDownloadUrlMock.mockResolvedValue(
+          'https://example.com/fresh-signed-url',
+        );
+        const fileKey =
+          'org_123/attachments/evidence-forms/penetration-test/report.pdf';
+
+        mockedDb.evidenceSubmission.findFirst.mockResolvedValue({
+          id: 'sub_pentest_3',
+          formType: 'penetration_test',
+          data: pentestPayload(fileKey),
+          submittedBy: null,
+          reviewedBy: null,
+        });
+
+        const result = await service.getSubmission({
+          organizationId: 'org_123',
+          authContext,
+          formType: 'penetration-test',
+          submissionId: 'sub_pentest_3',
+        });
+
+        expect(getPresignedDownloadUrlMock).toHaveBeenCalledWith(fileKey);
+        expect(result.submission.data).toMatchObject({
+          pentestReport: {
+            downloadUrl: 'https://example.com/fresh-signed-url',
+          },
+        });
+      });
+    });
+
+    describe('exportCsv', () => {
+      const exportSubmission = (fileKey: string) => ({
+        id: 'sub_export_1',
+        submittedAt: new Date('2026-01-01T00:00:00.000Z'),
+        submittedBy: { name: 'Jane Employee', email: 'jane@example.com' },
+        data: pentestPayload(fileKey),
+      });
+
+      it('does not presign a stored fileKey outside the organization', async () => {
+        mockedDb.evidenceSubmission.findMany.mockResolvedValue([
+          exportSubmission(
+            'org_999/attachments/evidence-forms/penetration-test/evil.pdf',
+          ),
+        ]);
+
+        const csv = await service.exportCsv({
+          organizationId: 'org_123',
+          formType: 'penetration-test',
+          authContext,
+        });
+
+        expect(getPresignedDownloadUrlMock).not.toHaveBeenCalled();
+        expect(csv).not.toContain('org_999');
+        expect(csv).toContain('sub_export_1');
+      });
+
+      it("presigns a stored fileKey that belongs to the caller's organization", async () => {
+        getPresignedDownloadUrlMock.mockResolvedValue(
+          'https://example.com/fresh-signed-url',
+        );
+        const fileKey =
+          'org_123/attachments/evidence-forms/penetration-test/report.pdf';
+        mockedDb.evidenceSubmission.findMany.mockResolvedValue([
+          exportSubmission(fileKey),
+        ]);
+
+        const csv = await service.exportCsv({
+          organizationId: 'org_123',
+          formType: 'penetration-test',
+          authContext,
+        });
+
+        expect(getPresignedDownloadUrlMock).toHaveBeenCalledWith(fileKey);
+        expect(csv).toContain('https://example.com/fresh-signed-url');
+      });
+    });
+  });
+
   describe('reviewSubmission', () => {
     it('includes submittedBy and reviewedBy relations on review update', async () => {
       mockedDb.evidenceSubmission.findFirst.mockResolvedValue({
@@ -334,6 +498,101 @@ describe('EvidenceFormsService', () => {
         },
         formType: 'meeting',
       });
+    });
+  });
+
+  describe('exportCsv', () => {
+    it('neutralizes spreadsheet formula prefixes in submitted free text (GH-097)', async () => {
+      mockedDb.evidenceSubmission.findMany.mockResolvedValue([
+        {
+          id: 'sub_attack',
+          submittedAt: new Date('2026-09-18T00:00:00.000Z'),
+          submittedBy: { name: 'Mallory', email: 'mallory@example.com' },
+          data: {
+            submissionDate: '2026-09-18',
+            incidentDate: '2026-09-18',
+            complaintDetails: "=cmd|' /C calc'!A0",
+            individualsInvolved: '+SUM(A1:A2)',
+            evidence: '-10+20',
+          },
+        },
+        {
+          id: 'sub_newline',
+          submittedAt: new Date('2026-09-18T00:30:00.000Z'),
+          submittedBy: { name: 'Mallory', email: 'mallory@example.com' },
+          data: {
+            submissionDate: '2026-09-18',
+            incidentDate: '2026-09-18',
+            complaintDetails: '\n=HYPERLINK("https://evil.example","x")',
+            individualsInvolved: 'Mallory',
+            evidence: 'x',
+          },
+        },
+        {
+          id: 'sub_fullwidth',
+          submittedAt: new Date('2026-09-18T00:45:00.000Z'),
+          submittedBy: { name: 'Mallory', email: 'mallory@example.com' },
+          data: {
+            submissionDate: '2026-09-18',
+            incidentDate: '2026-09-18',
+            // Full-width formula prefixes (U+FF1D etc.): OWASP notes some
+            // locales may treat these as formula starters.
+            complaintDetails: '\uFF1DSUM(A1:A2)',
+            individualsInvolved: '\uFF0B1+2',
+            evidence: '\uFF0D10',
+          },
+        },
+        {
+          id: 'sub_benign',
+          submittedAt: new Date('2026-09-18T01:00:00.000Z'),
+          submittedBy: { name: 'Alice', email: 'alice@example.com' },
+          data: {
+            submissionDate: '2026-09-18',
+            incidentDate: '2026-09-18',
+            complaintDetails: '@channel please review',
+            individualsInvolved: 'Bob and Carol',
+            evidence: 'He said "hi"',
+          },
+        },
+      ]);
+
+      const csv = await service.exportCsv({
+        organizationId: 'org_123',
+        formType: 'whistleblower-report',
+        authContext,
+      });
+
+      // The sub_newline row carries an embedded newline inside a quoted
+      // cell, so a naive split on \n yields 6 pieces, not 5.
+      const lines = csv.split('\n');
+      expect(lines).toHaveLength(6);
+      // Every formula-leading value is prefixed with a single quote so
+      // Excel/Sheets render it as text instead of evaluating it.
+      expect(lines[1]).toContain(`"'=cmd|' /C calc'!A0"`);
+      expect(lines[1]).toContain('"\'+SUM(A1:A2)"');
+      expect(lines[1]).toContain('"\'-10+20"');
+      // A leading line feed must not smuggle a formula past the check:
+      // the quote prefix lands before the \n so nothing evaluates it.
+      expect(lines[2].endsWith(',"\'')).toBe(true);
+      expect(lines[3]).toContain('=HYPERLINK(""https://evil.example"",""x"")');
+      expect(lines[4]).toContain(`"'\uFF1DSUM(A1:A2)"`);
+      expect(lines[4]).toContain(`"'\uFF0B1+2"`);
+      expect(lines[4]).toContain(`"'\uFF0D10"`);
+      expect(lines[5]).toContain(`"'@channel please review"`);
+      // Benign values stay untouched; embedded-quote escaping is unchanged.
+      expect(lines[5]).toContain('"Bob and Carol"');
+      expect(lines[5]).toContain('He said ""hi""');
+    });
+
+    it('rejects export for reviewers without privileged evidence access', async () => {
+      await expect(
+        service.exportCsv({
+          organizationId: 'org_123',
+          formType: 'whistleblower-report',
+          authContext: { ...authContext, userRoles: ['employee'] },
+        }),
+      ).rejects.toThrow();
+      expect(mockedDb.evidenceSubmission.findMany).not.toHaveBeenCalled();
     });
   });
 });

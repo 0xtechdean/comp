@@ -8,7 +8,7 @@
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to your Freshteam account\n2. Click your profile icon in the top right\n3. Select 'API Settings'\n4. Copy the API key displayed under 'Your API Key'\n5. Enter your subdomain (the part before .freshteam.com in your URL)\n6. Paste the API key below\n\nNote: Only HR Partner, Admin, and Account Admin roles can use the API.",
+      "setupInstructions": "⚠️ DEPRECATED: Freshteam was sunset by Freshworks in March 2024. New connections will likely fail because the upstream API and product are no longer available. This integration is preserved only for any remaining legacy tenants.\n\n1. Log in to your Freshteam account (if it still exists)\n2. Click your profile icon in the top right\n3. Select 'API Settings'\n4. Copy the API key displayed under 'Your API Key'\n5. Enter your subdomain (the part before .freshteam.com in your URL)\n6. Paste the API key below\n\nNote: Only HR Partner, Admin, and Account Admin roles can use the API.",
       "credentialFields": [
         {
           "label": "Freshteam Subdomain",

@@ -6,9 +6,23 @@
   "docsUrl": "https://developers.secureframe.com/",
   "baseUrl": "https://api.secureframe.com",
   "authConfig": {
-    "type": "api_key",
+    "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to Secureframe at https://app.secureframe.com\n2. Go to Settings > API Keys\n3. Generate a new API key with read access\n4. Copy the API key and paste it below"
+      "setupInstructions": "1. Log in to Secureframe at https://app.secureframe.com\n2. Go to Settings > API Keys\n3. Generate a new API key pair (Access Key ID + Secret)\n4. Paste both fields below",
+      "credentialFields": [
+        {
+          "label": "Access Key ID",
+          "type": "text",
+          "required": true,
+          "helpText": "From Secureframe Settings > API Keys"
+        },
+        {
+          "label": "Secret Access Key",
+          "type": "password",
+          "required": true,
+          "helpText": "From Secureframe Settings > API Keys"
+        }
+      ]
     }
   },
   "capabilities": [

@@ -4,7 +4,7 @@
   "description": "Monitor Uptime Robot uptime monitors and account accessibility for availability compliance",
   "category": "Monitoring",
   "docsUrl": "https://uptimerobot.com/api/v3/",
-  "baseUrl": "https://api.uptimerobot.com/v3",
+  "baseUrl": "https://api.uptimerobot.com/v2",
   "authConfig": {
     "type": "api_key",
     "config": {

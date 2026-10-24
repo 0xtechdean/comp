@@ -4,7 +4,7 @@
   "description": "Monitor Coda docs and workspace configuration for documentation compliance",
   "category": "Productivity",
   "docsUrl": "https://coda.io/developers/apis/v1",
-  "baseUrl": "https://coda.io/",
+  "baseUrl": "https://coda.io/apis/v1",
   "authConfig": {
     "type": "api_key",
     "config": {}

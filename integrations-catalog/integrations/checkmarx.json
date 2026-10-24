@@ -8,13 +8,19 @@
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to Checkmarx One\n2. Go to IAM → API Keys\n3. Create a key with read access\n4. Paste it below",
+      "setupInstructions": "1. Log in to Checkmarx One as an admin\n2. Open Settings > Identity and Access Management > API Keys\n3. Generate an API Key (this is a JWT refresh token)\n4. Select the matching region for your Checkmarx One tenant\n5. Paste the key and save. The integration exchanges it for an OAuth access token at runtime.",
       "credentialFields": [
         {
           "label": "API Key",
           "type": "password",
           "required": true,
-          "helpText": "Checkmarx One → IAM → API Keys"
+          "helpText": "Checkmarx One > Settings > Identity and Access Management > API Keys. The tenant is auto-detected from the key."
+        },
+        {
+          "label": "Region",
+          "type": "select",
+          "required": true,
+          "helpText": "Select the Checkmarx One region matching your tenant URL."
         }
       ]
     }

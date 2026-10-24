@@ -42,7 +42,7 @@
       "name": "Employee Access",
       "description": "Lists all users across Power BI workspaces with their access roles. Retrieves workspaces (groups) with expanded user membership to identify who has access and at what permission level (Admin, Member, Contributor, Viewer).",
       "defaultSeverity": "medium",
-      "enabled": true
+      "enabled": false
     },
     {
       "slug": "power_bi_app_availability",

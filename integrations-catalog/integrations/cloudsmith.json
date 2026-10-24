@@ -16,16 +16,16 @@
   "syncSupported": false,
   "checks": [
     {
-      "slug": "cloudsmith_secure_code",
-      "name": "Secure Code",
-      "description": "Verifies Cloudsmith organizations are configured for secure package distribution",
+      "slug": "cloudsmith_org_access",
+      "name": "Cloudsmith Organization Access & Repositories",
+      "description": "Inventories Cloudsmith organizations the API key has access to, lists members with roles and 2FA status, and enumerates repositories with visibility.",
       "defaultSeverity": "medium",
       "enabled": true
     },
     {
-      "slug": "cloudsmith_secure_secrets",
-      "name": "Secure Secrets",
-      "description": "Verifies Cloudsmith account is active and artifact signing is configured",
+      "slug": "cloudsmith_app_availability",
+      "name": "Cloudsmith API Availability",
+      "description": "Verifies the Cloudsmith API key is valid and reports the authenticated user and accessible organizations.",
       "defaultSeverity": "medium",
       "enabled": true
     }

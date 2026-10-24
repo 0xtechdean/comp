@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-05-11T18:03:02.706Z",
-  "total": 583,
-  "sourceCount": 583,
-  "uniqueSlugs": 583,
+  "generatedAt": "2026-08-09T18:30:13.052Z",
+  "total": 590,
+  "sourceCount": 590,
+  "uniqueSlugs": 590,
   "byCategory": {
-    "HR & People": 63,
-    "Security": 134,
+    "HR & People": 64,
+    "Security": 136,
     "Productivity": 120,
     "Infrastructure": 33,
     "Communication": 47,
     "Monitoring": 56,
-    "Cloud": 54,
-    "Development": 54,
+    "Cloud": 56,
+    "Development": 56,
     "Identity & Access": 22
   },
   "integrations": [
@@ -172,7 +172,7 @@
       "slug": "airbyte",
       "name": "Airbyte",
       "category": "Cloud",
-      "authType": "api_key",
+      "authType": "custom",
       "checkCount": 2,
       "syncSupported": false,
       "file": "integrations/airbyte.json"
@@ -181,7 +181,7 @@
       "slug": "aircall",
       "name": "Aircall",
       "category": "Communication",
-      "authType": "basic",
+      "authType": "custom",
       "checkCount": 3,
       "syncSupported": true,
       "file": "integrations/aircall.json"
@@ -235,7 +235,7 @@
       "slug": "amplitude",
       "name": "Amplitude",
       "category": "Monitoring",
-      "authType": "api_key",
+      "authType": "custom",
       "checkCount": 2,
       "syncSupported": false,
       "file": "integrations/amplitude.json"
@@ -255,7 +255,7 @@
       "category": "Cloud",
       "authType": "custom",
       "checkCount": 2,
-      "syncSupported": false,
+      "syncSupported": true,
       "file": "integrations/anthropic.json"
     },
     {
@@ -284,6 +284,15 @@
       "checkCount": 3,
       "syncSupported": false,
       "file": "integrations/apple-business-manager.json"
+    },
+    {
+      "slug": "aptible",
+      "name": "Aptible",
+      "category": "Cloud",
+      "authType": "custom",
+      "checkCount": 8,
+      "syncSupported": false,
+      "file": "integrations/aptible.json"
     },
     {
       "slug": "aqua-security",
@@ -856,7 +865,7 @@
       "slug": "cisco-meraki",
       "name": "Cisco Meraki",
       "category": "Infrastructure",
-      "authType": "api_key",
+      "authType": "custom",
       "checkCount": 2,
       "syncSupported": false,
       "file": "integrations/cisco-meraki.json"
@@ -982,7 +991,7 @@
       "slug": "cobalt",
       "name": "Cobalt",
       "category": "Security",
-      "authType": "api_key",
+      "authType": "custom",
       "checkCount": 2,
       "syncSupported": false,
       "file": "integrations/cobalt.json"
@@ -1225,7 +1234,7 @@
       "slug": "cronitor",
       "name": "Cronitor",
       "category": "Monitoring",
-      "authType": "basic",
+      "authType": "custom",
       "checkCount": 2,
       "syncSupported": false,
       "file": "integrations/cronitor.json"
@@ -1478,7 +1487,7 @@
       "name": "Docebo",
       "category": "Productivity",
       "authType": "custom",
-      "checkCount": 2,
+      "checkCount": 3,
       "syncSupported": true,
       "file": "integrations/docebo.json"
     },
@@ -1546,15 +1555,6 @@
       "file": "integrations/dropbox-business.json"
     },
     {
-      "slug": "dropbox-sign",
-      "name": "Dropbox Sign",
-      "category": "Productivity",
-      "authType": "custom",
-      "checkCount": 1,
-      "syncSupported": false,
-      "file": "integrations/dropbox-sign.json"
-    },
-    {
       "slug": "hellosign",
       "name": "Dropbox Sign",
       "category": "Productivity",
@@ -1562,6 +1562,15 @@
       "checkCount": 2,
       "syncSupported": false,
       "file": "integrations/hellosign.json"
+    },
+    {
+      "slug": "dropbox-sign",
+      "name": "Dropbox Sign",
+      "category": "Productivity",
+      "authType": "custom",
+      "checkCount": 1,
+      "syncSupported": false,
+      "file": "integrations/dropbox-sign.json"
     },
     {
       "slug": "druva",
@@ -1582,15 +1591,6 @@
       "file": "integrations/dub.json"
     },
     {
-      "slug": "duo-security",
-      "name": "Duo Security",
-      "category": "Identity & Access",
-      "authType": "custom",
-      "checkCount": 2,
-      "syncSupported": false,
-      "file": "integrations/duo-security.json"
-    },
-    {
       "slug": "duo",
       "name": "Duo Security",
       "category": "Identity & Access",
@@ -1598,6 +1598,15 @@
       "checkCount": 2,
       "syncSupported": false,
       "file": "integrations/duo.json"
+    },
+    {
+      "slug": "duo-security",
+      "name": "Duo Security",
+      "category": "Identity & Access",
+      "authType": "custom",
+      "checkCount": 2,
+      "syncSupported": false,
+      "file": "integrations/duo-security.json"
     },
     {
       "slug": "dynamics-365",
@@ -1627,15 +1636,6 @@
       "file": "integrations/egnyte.json"
     },
     {
-      "slug": "elastic-cloud",
-      "name": "Elastic Cloud",
-      "category": "Cloud",
-      "authType": "custom",
-      "checkCount": 2,
-      "syncSupported": false,
-      "file": "integrations/elastic-cloud.json"
-    },
-    {
       "slug": "elastic",
       "name": "Elastic Cloud",
       "category": "Monitoring",
@@ -1643,6 +1643,15 @@
       "checkCount": 2,
       "syncSupported": false,
       "file": "integrations/elastic.json"
+    },
+    {
+      "slug": "elastic-cloud",
+      "name": "Elastic Cloud",
+      "category": "Cloud",
+      "authType": "custom",
+      "checkCount": 2,
+      "syncSupported": false,
+      "file": "integrations/elastic-cloud.json"
     },
     {
       "slug": "employment-hero",
@@ -1765,7 +1774,7 @@
       "slug": "fireworks-ai",
       "name": "Fireworks AI",
       "category": "Cloud",
-      "authType": "api_key",
+      "authType": "custom",
       "checkCount": 2,
       "syncSupported": false,
       "file": "integrations/fireworks-ai.json"
@@ -1796,6 +1805,15 @@
       "checkCount": 3,
       "syncSupported": false,
       "file": "integrations/fleetdm.json"
+    },
+    {
+      "slug": "flutterflow",
+      "name": "FlutterFlow",
+      "category": "Development",
+      "authType": "custom",
+      "checkCount": 1,
+      "syncSupported": false,
+      "file": "integrations/flutterflow.json"
     },
     {
       "slug": "fly",
@@ -1900,7 +1918,7 @@
       "slug": "frontegg",
       "name": "Frontegg",
       "category": "Identity & Access",
-      "authType": "api_key",
+      "authType": "custom",
       "checkCount": 2,
       "syncSupported": false,
       "file": "integrations/frontegg.json"
@@ -2167,6 +2185,15 @@
       "file": "integrations/hexnode.json"
     },
     {
+      "slug": "hibob",
+      "name": "HiBob",
+      "category": "HR & People",
+      "authType": "basic",
+      "checkCount": 2,
+      "syncSupported": false,
+      "file": "integrations/hibob.json"
+    },
+    {
       "slug": "bob",
       "name": "HiBob",
       "category": "HR & People",
@@ -2176,19 +2203,10 @@
       "file": "integrations/bob.json"
     },
     {
-      "slug": "hibob",
-      "name": "HiBob",
-      "category": "HR & People",
-      "authType": "custom",
-      "checkCount": 2,
-      "syncSupported": false,
-      "file": "integrations/hibob.json"
-    },
-    {
       "slug": "highlight-io",
       "name": "Highlight",
       "category": "Monitoring",
-      "authType": "api_key",
+      "authType": "custom",
       "checkCount": 2,
       "syncSupported": false,
       "file": "integrations/highlight-io.json"
@@ -2270,7 +2288,7 @@
       "name": "Humaans",
       "category": "HR & People",
       "authType": "custom",
-      "checkCount": 1,
+      "checkCount": 2,
       "syncSupported": false,
       "file": "integrations/humaans.json"
     },
@@ -2332,7 +2350,7 @@
       "slug": "inngest",
       "name": "Inngest",
       "category": "Development",
-      "authType": "api_key",
+      "authType": "custom",
       "checkCount": 2,
       "syncSupported": false,
       "file": "integrations/inngest.json"
@@ -2431,7 +2449,7 @@
       "slug": "jenkins",
       "name": "Jenkins",
       "category": "Development",
-      "authType": "basic",
+      "authType": "custom",
       "checkCount": 2,
       "syncSupported": false,
       "file": "integrations/jenkins.json"
@@ -2539,7 +2557,7 @@
       "slug": "convertkit",
       "name": "Kit (ConvertKit)",
       "category": "Communication",
-      "authType": "api_key",
+      "authType": "custom",
       "checkCount": 2,
       "syncSupported": false,
       "file": "integrations/convertkit.json"
@@ -2593,7 +2611,7 @@
       "slug": "kong",
       "name": "Kong Konnect",
       "category": "Infrastructure",
-      "authType": "api_key",
+      "authType": "custom",
       "checkCount": 2,
       "syncSupported": false,
       "file": "integrations/kong.json"
@@ -2743,15 +2761,6 @@
       "file": "integrations/logrocket.json"
     },
     {
-      "slug": "logz-io",
-      "name": "Logz.io",
-      "category": "Monitoring",
-      "authType": "custom",
-      "checkCount": 3,
-      "syncSupported": false,
-      "file": "integrations/logz-io.json"
-    },
-    {
       "slug": "logzio",
       "name": "Logz.io",
       "category": "Monitoring",
@@ -2759,6 +2768,15 @@
       "checkCount": 2,
       "syncSupported": false,
       "file": "integrations/logzio.json"
+    },
+    {
+      "slug": "logz-io",
+      "name": "Logz.io",
+      "category": "Monitoring",
+      "authType": "custom",
+      "checkCount": 3,
+      "syncSupported": false,
+      "file": "integrations/logz-io.json"
     },
     {
       "slug": "looker",
@@ -3256,6 +3274,15 @@
       "file": "integrations/ninjaone.json"
     },
     {
+      "slug": "ninjio",
+      "name": "NINJIO",
+      "category": "Security",
+      "authType": "custom",
+      "checkCount": 1,
+      "syncSupported": false,
+      "file": "integrations/ninjio.json"
+    },
+    {
       "slug": "nordpass",
       "name": "NordPass",
       "category": "Security",
@@ -3308,6 +3335,15 @@
       "checkCount": 3,
       "syncSupported": false,
       "file": "integrations/octopus-deploy.json"
+    },
+    {
+      "slug": "odoo",
+      "name": "Odoo",
+      "category": "HR & People",
+      "authType": "custom",
+      "checkCount": 2,
+      "syncSupported": false,
+      "file": "integrations/odoo.json"
     },
     {
       "slug": "okta",
@@ -3371,6 +3407,15 @@
       "checkCount": 2,
       "syncSupported": false,
       "file": "integrations/openphone.json"
+    },
+    {
+      "slug": "openstack",
+      "name": "OpenStack",
+      "category": "Cloud",
+      "authType": "custom",
+      "checkCount": 2,
+      "syncSupported": false,
+      "file": "integrations/openstack.json"
     },
     {
       "slug": "opsgenie",
@@ -3976,6 +4021,15 @@
       "file": "integrations/roboflow.json"
     },
     {
+      "slug": "roboform",
+      "name": "RoboForm",
+      "category": "Security",
+      "authType": "custom",
+      "checkCount": 2,
+      "syncSupported": false,
+      "file": "integrations/roboform.json"
+    },
+    {
       "slug": "rollbar",
       "name": "Rollbar",
       "category": "Monitoring",
@@ -4123,7 +4177,7 @@
       "slug": "secureframe",
       "name": "Secureframe",
       "category": "Security",
-      "authType": "api_key",
+      "authType": "custom",
       "checkCount": 2,
       "syncSupported": false,
       "file": "integrations/secureframe.json"
@@ -4318,6 +4372,15 @@
       "file": "integrations/socket.json"
     },
     {
+      "slug": "sonarqube-cloud",
+      "name": "SonarCloud",
+      "category": "Development",
+      "authType": "custom",
+      "checkCount": 2,
+      "syncSupported": false,
+      "file": "integrations/sonarqube-cloud.json"
+    },
+    {
       "slug": "sonarcloud",
       "name": "SonarCloud",
       "category": "Security",
@@ -4325,15 +4388,6 @@
       "checkCount": 2,
       "syncSupported": false,
       "file": "integrations/sonarcloud.json"
-    },
-    {
-      "slug": "sonarqube-cloud",
-      "name": "SonarCloud",
-      "category": "Development",
-      "authType": "api_key",
-      "checkCount": 2,
-      "syncSupported": false,
-      "file": "integrations/sonarqube-cloud.json"
     },
     {
       "slug": "sonarqube-server",
@@ -5144,6 +5198,15 @@
       "checkCount": 2,
       "syncSupported": false,
       "file": "integrations/wrike.json"
+    },
+    {
+      "slug": "xano",
+      "name": "Xano",
+      "category": "Development",
+      "authType": "custom",
+      "checkCount": 1,
+      "syncSupported": false,
+      "file": "integrations/xano.json"
     },
     {
       "slug": "xata",

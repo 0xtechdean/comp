@@ -4,11 +4,25 @@
   "description": "Pentest as a service platform. Monitor security assessments.",
   "category": "Security",
   "docsUrl": "https://docs.cobalt.io/",
-  "baseUrl": "https://api.cobalt.io",
+  "baseUrl": "https://api.us.cobalt.io",
   "authConfig": {
-    "type": "api_key",
+    "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to Cobalt at https://app.cobalt.io\n2. Go to Settings > API > Generate API Token\n3. Copy the token and paste it below"
+      "setupInstructions": "Cobalt's PtaaS v2 API requires TWO credentials.\n\nStep 1 — Create an API Token (Authorization: Bearer)\n1. Log in to Cobalt at https://app.cobalt.io\n2. Go to your user menu > Settings > API Tokens\n3. Click \"Generate token\", name it (e.g. \"Comp AI\"), and copy the token value\n\nStep 2 — Get your Organization Token (X-Org-Token)\n1. In Cobalt, go to Settings > Organization > API Tokens\n2. Copy the Organization Token (a base64-looking string starting with \"b3J...\")\n\nStep 3 — Paste both below.\nNotes:\n- Base URL is https://api.us.cobalt.io (not api.cobalt.io — that host returns 404).\n- The user that owns the API token must be a member of the organization the Org Token refers to.",
+      "credentialFields": [
+        {
+          "label": "API Token",
+          "type": "password",
+          "required": true,
+          "helpText": "Personal API token from Cobalt. Created at https://app.cobalt.io/settings/api-tokens."
+        },
+        {
+          "label": "Organization Token (X-Org-Token)",
+          "type": "password",
+          "required": true,
+          "helpText": "Required for organization-scoped endpoints (pentests, findings, assets). Find it in Cobalt > Settings > Organization > API Tokens."
+        }
+      ]
     }
   },
   "capabilities": [

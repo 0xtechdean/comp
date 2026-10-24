@@ -4,7 +4,7 @@
   "description": "Monitor Codecov code coverage reports to verify tests cover code changes",
   "category": "Development",
   "docsUrl": "https://docs.codecov.com/reference/overview",
-  "baseUrl": "https://codecov.io/",
+  "baseUrl": "https://api.codecov.io/api/v2",
   "authConfig": {
     "type": "api_key",
     "config": {}

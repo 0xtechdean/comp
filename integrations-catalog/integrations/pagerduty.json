@@ -8,13 +8,13 @@
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to PagerDuty.\n2. Go to Integrations > API Access Keys.\n3. Click 'Create New API Key', give it a description (e.g. 'Comp AI'), select Read-Only.\n4. Copy the API key and paste it below.",
+      "setupInstructions": "1. Log in to PagerDuty as an Admin or Account Owner.\n2. In the web app, navigate to Integrations > Developer Tools > API Access Keys.\n3. Click 'Create New API Key'.\n4. Enter a Description (e.g. 'Comp AI'), check 'Read-only API Key', then click 'Create Key'.\n5. Copy the API key (shown only once) and paste it below.",
       "credentialFields": [
         {
           "label": "API Key",
           "type": "password",
           "required": true,
-          "helpText": "Found in PagerDuty > Integrations > API Access Keys. Create a General Access Key with Read-Only access."
+          "helpText": "Found in PagerDuty > Integrations > Developer Tools > API Access Keys. Create a General Access REST API Key with 'Read-only API Key' checked."
         }
       ]
     }

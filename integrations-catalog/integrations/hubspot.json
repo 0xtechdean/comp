@@ -8,7 +8,7 @@
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to HubSpot as a Super Admin\n2. Go to Development (left sidebar)\n3. Click Keys > Service keys\n4. Click \"Create service key\" in the top right\n5. Name your key (e.g. \"CompAI\")\n6. Click \"Add new scope\" and select: settings.users.read, crm.objects.owners.read\n7. Click Update, then Create\n8. Copy the service key and paste it below\n\nNote: If you still see Private Apps instead of Service Keys, go to Development > Legacy apps and create a legacy private app with the same scopes.",
+      "setupInstructions": "Step 1 — Create a HubSpot Private App\n1. In HubSpot, go to Settings > Integrations > Private Apps (https://app.hubspot.com/private-apps)\n2. Click Create a private app\n3. Name it (e.g. \"Comp AI\")\n4. Under Scopes, add:\n   - account-info.security.read   (account info check)\n   - settings.users.read           (employee access check)\n   - crm.objects.owners.read       (contact information check)\n5. Click Create app and copy the access token\n\nToken format: starts with \"pat-\" followed by your data-center region (e.g. pat-na1-..., pat-eu1-..., pat-na2-...)\n\nStep 2 — Paste the access token below\n\nNote: HubSpot updates scopes on the existing token when you change them — no need to regenerate the token after adding scopes (as of 2024 docs).",
       "credentialFields": [
         {
           "label": "Service Key",

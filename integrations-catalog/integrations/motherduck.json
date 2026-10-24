@@ -20,7 +20,7 @@
       "name": "MotherDuck App Availability",
       "description": "Checks that the MotherDuck API is accessible.",
       "defaultSeverity": "medium",
-      "enabled": true
+      "enabled": false
     },
     {
       "slug": "motherduck_employee_access",

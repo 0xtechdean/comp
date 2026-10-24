@@ -7,7 +7,9 @@
   "baseUrl": "https://api.figma.com/",
   "authConfig": {
     "type": "api_key",
-    "config": {}
+    "config": {
+      "setupInstructions": "Steps to generate a Figma personal access token:\n1. In Figma, click your avatar (top-right) → Settings → Account → Personal access tokens\n2. Click 'Generate new token', name it (e.g. 'Comp AI compliance check'), set expiration as desired\n3. Copy the token and paste it into the API Key field below\n\nFor each Figma check you enable, you will also be asked for a Team ID. Find it in the team URL: figma.com/files/team/{team_id}/...\n\nImportant notes:\n - The token inherits the permissions of the user who creates it. Make sure that user is a member of every team you want to monitor — otherwise the team check will fail with 403.\n - Figma's REST API does NOT expose a full team-member list for personal access tokens. The 'Employee Access' check verifies the token can see the team's projects as a proxy for membership. A full team-member audit requires Figma Enterprise + SCIM, or OAuth with admin scopes."
+    }
   },
   "capabilities": [
     "checks"

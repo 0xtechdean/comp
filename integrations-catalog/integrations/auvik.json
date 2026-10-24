@@ -8,7 +8,7 @@
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to Auvik at https://my.auvik.com\n2. Go to Admin > Integrations > API\n3. Generate an API key if you have not already\n4. Copy the API username and API key\n5. Select your Auvik data region\n6. Enter the values below",
+      "setupInstructions": "1. Sign in to Auvik using your regional URL (e.g. https://us5.my.auvik.com — the text before \"my.auvik.com\" is your region, such as us5).\n2. Click your username at the bottom-left of the Auvik navigation to open your profile, and find the API Key section. (A dedicated user account for the API is recommended.)\n3. Click Generate (or Regenerate) and copy the API key — Auvik shows it only once.\n4. Your API Username is the email address you sign in to Auvik with.\n5. Below: select the Region that matches your Auvik URL (e.g. US5 for us5.my.auvik.com), then enter the API username (email) and API key.",
       "credentialFields": [
         {
           "label": "API Username",

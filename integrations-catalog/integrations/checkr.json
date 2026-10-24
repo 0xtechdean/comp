@@ -3,12 +3,12 @@
   "name": "Checkr",
   "description": "Monitor Checkr background check candidates for HR verification compliance",
   "category": "HR & People",
-  "docsUrl": "https://docs.checkr.com/reference",
+  "docsUrl": "https://docs.checkr.com/",
   "baseUrl": "https://api.checkr.com/",
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to Checkr at https://dashboard.checkr.com\n2. Go to Developer Settings -> API Keys\n3. Copy your API key\n4. Enter it below",
+      "setupInstructions": "1. Log in to Checkr at https://dashboard.checkr.com\n2. Go to Account Settings > Developer Settings > API keys\n3. Copy your API key\n4. Enter it below\n\nNote: Both production and staging API keys are supported. The integration automatically detects your key's environment and routes to the correct Checkr API, so no extra configuration is needed. Production and staging keys are separate — use the key for the environment you want to audit.",
       "credentialFields": [
         {
           "label": "API Key",
@@ -28,7 +28,7 @@
     {
       "slug": "checkr_employee_verification",
       "name": "Employee Verification",
-      "description": "Verifies Checkr is being used for background check screening",
+      "description": "Lists all Checkr background check candidates individually with their name, email, and screening status for access review evidence.",
       "defaultSeverity": "medium",
       "enabled": true
     },

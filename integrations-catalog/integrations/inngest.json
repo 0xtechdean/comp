@@ -6,9 +6,16 @@
   "docsUrl": "https://www.inngest.com/docs/reference/",
   "baseUrl": "https://api.inngest.com",
   "authConfig": {
-    "type": "api_key",
+    "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to your Inngest Cloud dashboard\n2. Go to Profile menu (bottom left) > API Keys\n3. Create a new API key (or use your environment signing key)\n4. Enter it below"
+      "setupInstructions": "1. Log in to Inngest Cloud (https://app.inngest.com).\n2. Select the environment you want to monitor (Production or a branch env).\n3. Go to Manage > Signing Key and copy the value (starts with \"signkey-\").\n4. Paste the signing key above and save.\nNote: Inngest does not provide a public REST endpoint for listing team members, so the employee-access check is informational only and asks you to perform a manual review in the Inngest dashboard.",
+      "credentialFields": [
+        {
+          "label": "Signing Key",
+          "type": "password",
+          "required": true
+        }
+      ]
     }
   },
   "capabilities": [

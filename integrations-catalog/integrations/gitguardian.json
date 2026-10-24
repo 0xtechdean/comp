@@ -17,15 +17,15 @@
   "checks": [
     {
       "slug": "gitguardian_secure_code",
-      "name": "Secure Code",
-      "description": "Checks GitGuardian for open incidents of exposed secrets in code",
+      "name": "Open Secret Incidents",
+      "description": "Lists open (TRIGGERED/ASSIGNED) GitGuardian secret incidents. Fails if any are open; passes when none remain.",
       "defaultSeverity": "critical",
       "enabled": true
     },
     {
       "slug": "gitguardian_secure_secrets",
-      "name": "Secure Secrets",
-      "description": "Reviews GitGuardian monitored sources for secret scanning coverage",
+      "name": "Monitored Sources",
+      "description": "Verifies at least one source (GitHub/GitLab/Bitbucket/Azure DevOps repository) is connected to GitGuardian for secret scanning.",
       "defaultSeverity": "high",
       "enabled": true
     }

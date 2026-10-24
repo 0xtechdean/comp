@@ -4,7 +4,7 @@
   "description": "Monitor Hetzner Cloud servers and firewall configuration for EU infrastructure compliance",
   "category": "Cloud",
   "docsUrl": "https://docs.hetzner.cloud/",
-  "baseUrl": "https://api.hetzner.cloud/",
+  "baseUrl": "https://api.hetzner.cloud/v1",
   "authConfig": {
     "type": "api_key",
     "config": {

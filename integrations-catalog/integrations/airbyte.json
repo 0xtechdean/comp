@@ -4,17 +4,29 @@
   "description": "Monitor Airbyte data integration pipelines for connection status and workspace access compliance",
   "category": "Cloud",
   "docsUrl": "https://reference.airbyte.com/reference/getting-started",
-  "baseUrl": "https://api.airbyte.com/",
+  "baseUrl": "https://api.airbyte.com",
   "authConfig": {
-    "type": "api_key",
+    "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to Airbyte Cloud at https://cloud.airbyte.com\n2. Go to Settings → API Keys\n3. Generate a new API key\n4. Copy and enter it below",
+      "setupInstructions": "1. Log in to Airbyte Cloud at https://cloud.airbyte.com (or your self-hosted instance).\n2. Go to Settings > Applications.\n3. Create a new Application; copy the Client ID and Client Secret (secret shown only once).\n4. Paste them above. For self-hosted Airbyte, also enter your API Base URL.\n5. Comp will exchange these for short-lived access tokens automatically.",
       "credentialFields": [
         {
-          "label": "API Key",
+          "label": "Client ID",
+          "type": "text",
+          "required": true,
+          "helpText": "Airbyte Cloud Application Client ID. Settings > Applications > Create Application."
+        },
+        {
+          "label": "Client Secret",
           "type": "password",
           "required": true,
-          "helpText": "Found in Airbyte Cloud Settings → API Keys"
+          "helpText": "Airbyte Cloud Application Client Secret. Shown once at application creation."
+        },
+        {
+          "label": "API Base URL (optional, self-hosted only)",
+          "type": "text",
+          "required": false,
+          "helpText": "Defaults to https://api.airbyte.com for Airbyte Cloud. For self-hosted Airbyte, enter your instance URL (e.g. https://airbyte.example.com/api/public)."
         }
       ]
     }

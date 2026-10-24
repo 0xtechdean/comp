@@ -55,7 +55,7 @@
     {
       "slug": "fusionauth_access_review_log",
       "name": "Access Review Log",
-      "description": "Verifies that audit logging is active in FusionAuth by checking for recent audit log entries.",
+      "description": "Performs an access review of FusionAuth users and their assigned roles.",
       "defaultSeverity": "medium",
       "enabled": true
     }

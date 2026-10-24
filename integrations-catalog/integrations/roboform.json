@@ -1,0 +1,51 @@
+{
+  "slug": "roboform",
+  "name": "RoboForm",
+  "description": "Audit RoboForm for Business user provisioning and employee access via SCIM 2.0.",
+  "category": "Security",
+  "docsUrl": "https://help.roboform.com/hc/en-us/articles/19684686751373-SCIM-provisioning-integration-with-Azure-Entra-AD",
+  "baseUrl": "https://scim.roboform.com/",
+  "authConfig": {
+    "type": "custom",
+    "config": {
+      "setupInstructions": "RoboForm exposes user provisioning data through its SCIM 2.0 endpoint. To connect:\n\nStep 1 — Open the RoboForm Admin Console\n1. Sign in as an administrator at https://www.roboform.com/business\n2. Open the admin console (Manage)\n\nStep 2 — Generate SCIM credentials\n1. Go to Company Settings > SCIM Provisioning\n2. Copy the SCIM Server URL\n3. Click Generate New Token and copy the token (shown only once)\n\nStep 3 — Paste both values below\n   - SCIM Server URL: the URL from step 2 (must end with a trailing slash)\n   - SCIM Bearer Token: the token from step 2\n\nNote: this integration is read-only — it only inspects the user list exposed via SCIM, it never writes back.",
+      "credentialFields": [
+        {
+          "label": "SCIM Server URL",
+          "type": "text",
+          "required": true,
+          "helpText": "Found in RoboForm Admin Console > Company Settings > SCIM Provisioning. Looks like https://scim.roboform.com/scim/v2/.../"
+        },
+        {
+          "label": "SCIM Bearer Token",
+          "type": "password",
+          "required": true,
+          "helpText": "Generated alongside the SCIM URL in the RoboForm Admin Console > Company Settings > SCIM Provisioning section."
+        }
+      ]
+    }
+  },
+  "capabilities": [
+    "checks"
+  ],
+  "supportsMultipleConnections": false,
+  "syncSupported": false,
+  "checks": [
+    {
+      "slug": "roboform_app_availability",
+      "name": "RoboForm App Availability",
+      "description": "Verifies the RoboForm SCIM endpoint is reachable and the bearer token is accepted.",
+      "defaultSeverity": "medium",
+      "enabled": true
+    },
+    {
+      "slug": "roboform_employee_access",
+      "name": "RoboForm Employee Access",
+      "description": "Lists users provisioned in RoboForm for Business so you can review who has access to the password vault.",
+      "defaultSeverity": "medium",
+      "enabled": true
+    }
+  ],
+  "checkCount": 2,
+  "isActive": true
+}

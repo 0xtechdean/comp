@@ -1,17 +1,17 @@
 {
   "slug": "anthropic",
   "name": "Anthropic",
-  "description": "AI safety company building Claude. Monitor API access and usage.",
+  "description": "AI safety company building Claude. Monitor organization member access, API availability, and sync employees from Anthropic.",
   "category": "Cloud",
   "docsUrl": "https://docs.anthropic.com/en/api/",
   "baseUrl": "https://api.anthropic.com",
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Go to console.anthropic.com and sign in\n2. Navigate to Settings > Admin API Keys (requires Organization Admin role)\n3. Create a new Admin API key\n4. Copy the key and enter it above\n5. Note: Admin API keys are required for organization-level checks. Regular API keys only work for model access checks.",
+      "setupInstructions": "1. Go to console.anthropic.com and sign in as an Organization Admin\n2. Navigate to Settings > Admin keys\n3. Create a new Admin API key (it will start with sk-ant-admin01-)\n4. Copy the key and enter it above\n5. Note: Only Admin API keys can list organization members and manage access. Regular API keys will not work for employee access checks.",
       "credentialFields": [
         {
-          "label": "API Key",
+          "label": "Admin API Key",
           "type": "password",
           "required": true
         }
@@ -19,10 +19,11 @@
     }
   },
   "capabilities": [
-    "checks"
+    "checks",
+    "sync"
   ],
   "supportsMultipleConnections": false,
-  "syncSupported": false,
+  "syncSupported": true,
   "checks": [
     {
       "slug": "anthropic_app_availability",
@@ -34,7 +35,7 @@
     {
       "slug": "anthropic_employee_access",
       "name": "Anthropic Employee Access",
-      "description": "Review Anthropic organization access by listing API keys, pending invitations, and workspaces",
+      "description": "Lists all Anthropic organization members with their email, role, and access details for Access Review evidence.",
       "defaultSeverity": "medium",
       "enabled": true
     }

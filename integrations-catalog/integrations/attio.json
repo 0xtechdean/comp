@@ -28,14 +28,14 @@
     {
       "slug": "attio_employee_access",
       "name": "Employee Access",
-      "description": "Reviews Attio workspace members and their CRM access permissions",
+      "description": "Lists Attio workspace members with their access level (admin/member/suspended) and emits per-member evidence.",
       "defaultSeverity": "medium",
       "enabled": true
     },
     {
-      "slug": "attio_access_review",
-      "name": "Access Review Log",
-      "description": "Audits Attio workspace member roles for access review compliance",
+      "slug": "attio_app_availability",
+      "name": "Application Availability",
+      "description": "Verifies the Attio API token is active and the workspace is reachable via /v2/self.",
       "defaultSeverity": "medium",
       "enabled": true
     }

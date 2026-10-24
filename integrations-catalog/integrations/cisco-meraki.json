@@ -6,9 +6,16 @@
   "docsUrl": "https://developer.cisco.com/meraki/api-v1/",
   "baseUrl": "https://api.meraki.com",
   "authConfig": {
-    "type": "api_key",
+    "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to Meraki Dashboard at https://dashboard.meraki.com\n2. Go to Organization > API & Webhooks from the left nav\n3. Select API keys and access from the top tabs\n4. Generate a new API key\n5. Copy and paste it below\n\nNote: Treat your API key like a password. Store it securely."
+      "setupInstructions": "1. Log in to the Meraki Dashboard at https://dashboard.meraki.com\n2. Click your profile icon (top right) > My profile\n3. Scroll to API access and click Generate new API key\n4. Copy the key (shown once) and paste it above\n5. Ensure your dashboard user has access to the organizations you want to monitor\n\nNote: Treat the API key like a password. Meraki uses the X-Cisco-Meraki-API-Key header for authentication.",
+      "credentialFields": [
+        {
+          "label": "Meraki Dashboard API Key",
+          "type": "password",
+          "required": true
+        }
+      ]
     }
   },
   "capabilities": [

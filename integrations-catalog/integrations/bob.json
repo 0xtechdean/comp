@@ -8,7 +8,23 @@
   "authConfig": {
     "type": "basic",
     "config": {
-      "setupInstructions": "1. Log in to HiBob\n2. Go to Settings → Integrations → API\n3. Create a Service User\n4. Copy the Service User ID and Token\n5. Use Service User ID as username and Token as password below"
+      "setupInstructions": "1. Log in to HiBob Admin\n2. Go to Settings > Integrations > Service Users\n3. Create a new Service User and grant it People read permission\n4. Copy the Service User ID and the generated Token\n5. Paste both below — HiBob requires HTTP Basic auth with id:token",
+      "credentialFields": [
+        {
+          "label": "Service User ID",
+          "type": "text",
+          "required": true,
+          "helpText": "The Service User ID shown in HiBob > Settings > Integrations > Service Users (e.g. SERVICE-12345)."
+        },
+        {
+          "label": "Service User Token",
+          "type": "password",
+          "required": true,
+          "helpText": "The token generated alongside the Service User in HiBob."
+        }
+      ],
+      "usernameField": "service_user_id",
+      "passwordField": "service_token"
     }
   },
   "capabilities": [

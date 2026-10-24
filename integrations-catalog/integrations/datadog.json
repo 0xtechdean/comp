@@ -8,7 +8,7 @@
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Go to Datadog > Organization Settings > API Keys and copy your API Key.\n2. Go to Organization Settings > Application Keys, create a key with scopes: monitors_read + synthetics_read.\n3. Enter your Datadog site (e.g. datadoghq.com for US, datadoghq.eu for EU).",
+      "setupInstructions": "You will need both an API Key and an Application Key from Datadog.\n\nStep 1 — Create an API Key\n1. In Datadog, go to Organization Settings > API Keys\n2. Click New Key, name it (e.g. \"Comp AI\"), and copy the key\n\nStep 2 — Create an Application Key with the required scopes\n1. Go to Organization Settings > Application Keys\n2. Click New Key, name it (e.g. \"Comp AI App Key\")\n3. Add ALL four scopes — each is needed for a specific check:\n   - monitors_read       (Monitoring & Alerting check)\n   - synthetics_read     (Synthetic Tests check)\n   - audit_logs_read     (Audit Logging check)\n   - user_access_read    (User Management check)\n4. Click Save and copy the key\n\nImportant: Application Keys inherit the creator's role permissions. The user creating the key must have the equivalent read access for each scope, or the key will be created without that scope (causing 403 \"Failed permission authorization checks\" errors when running the check).\n\nStep 3 — Enter both keys + your Datadog site below\nDatadog Site options:\n   - datadoghq.com      (US1, default)\n   - us3.datadoghq.com  (US3)\n   - us5.datadoghq.com  (US5)\n   - datadoghq.eu       (EU1, Germany)\n   - ap1.datadoghq.com  (AP1, Japan)\n   - ap2.datadoghq.com  (AP2, Australia)\n   - ddog-gov.com       (US1-FED, US Government)\n   - us2.ddog-gov.com   (US2-FED, US Government)\n\nOptional: For the Monitoring & Alerting check, you can set a \"Monitor tag filter\" (e.g. env:prod) in the check settings to scope only relevant monitors. Leave empty to check all monitors.",
       "credentialFields": [
         {
           "label": "API Key",
@@ -20,7 +20,7 @@
           "label": "Application Key",
           "type": "password",
           "required": true,
-          "helpText": "Found in Datadog > Organization Settings > Application Keys. Requires scopes: monitors_read, synthetics_read"
+          "helpText": "Found in Datadog > Organization Settings > Application Keys"
         }
       ]
     }

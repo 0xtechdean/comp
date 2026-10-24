@@ -8,24 +8,25 @@
   "authConfig": {
     "type": "custom",
     "config": {
+      "setupInstructions": "1. In MongoDB Atlas, go to Organization > Access Manager > Applications.\n2. Click 'Add Service Account', name it (e.g. 'Comp AI'), choose a secret expiry, and grant it the 'Organization Read Only' role.\n3. Click Create, then copy the Client ID and the Client Secret (the secret is shown only once).\n4. Find your Organization ID under Organization Settings (or the cloud.mongodb.com URL after /org/).\n5. Enter the Client ID, Client Secret, and Organization ID below.",
       "credentialFields": [
         {
-          "label": "Public API Key",
+          "label": "Service Account Client ID",
           "type": "text",
           "required": true,
-          "helpText": "Your MongoDB Atlas programmatic API public key. Create one at Organization > Access Manager > API Keys."
+          "helpText": "From Organization > Access Manager > Applications > your Service Account. Looks like mdb_sa_id_..."
         },
         {
-          "label": "Private API Key",
+          "label": "Service Account Client Secret",
           "type": "password",
           "required": true,
-          "helpText": "Your MongoDB Atlas programmatic API private key. Shown only once at creation time."
+          "helpText": "Shown only once when the Service Account is created. Looks like mdb_sa_sk_..."
         },
         {
           "label": "Organization ID",
           "type": "text",
           "required": true,
-          "helpText": "Your MongoDB Atlas Organization ID. Found at Organization Settings > General."
+          "helpText": "Your MongoDB Atlas Organization ID (Organization Settings, or the 24-character hex in the cloud.mongodb.com URL)."
         }
       ]
     }

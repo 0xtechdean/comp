@@ -13,19 +13,25 @@
           "label": "BigID Instance URL",
           "type": "text",
           "required": true,
-          "helpText": "Full URL of your BigID instance (e.g., https://your-company.bigid.cloud)"
+          "helpText": "Full URL of your BigID instance (e.g., https://your-company.bigid.cloud)."
         },
         {
-          "label": "Username",
-          "type": "text",
-          "required": true,
-          "helpText": "BigID admin username for API access"
-        },
-        {
-          "label": "Password",
+          "label": "BigID Refresh Token (recommended)",
           "type": "password",
-          "required": true,
-          "helpText": "BigID password for the admin user"
+          "required": false,
+          "helpText": "Generate at BigID > Settings > API Tokens. Used to obtain short-lived session tokens via /api/v1/refresh-access-token. Leave blank only if using username/password fallback."
+        },
+        {
+          "label": "Username (fallback)",
+          "type": "text",
+          "required": false,
+          "helpText": "BigID admin username. Only required if not using a refresh token."
+        },
+        {
+          "label": "Password (fallback)",
+          "type": "password",
+          "required": false,
+          "helpText": "BigID password. Only required if not using a refresh token."
         }
       ]
     }

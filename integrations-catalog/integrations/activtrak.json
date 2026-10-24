@@ -33,22 +33,22 @@
   "checks": [
     {
       "slug": "activtrak_monitoring_alerting",
-      "name": "Monitoring & Alerting",
-      "description": "Verifies ActivTrak activity monitoring is active by checking for recent activity data collected by deployed agents",
+      "name": "ActivTrak User Activity (Last 7 Days)",
+      "description": "Confirms ActivTrak agents are reporting activity by reading the working-hours report for the last 7 days; surfaces per-user totals as evidence. Note: this is not an alarm/alert configuration check — it verifies end-to-end monitoring is functioning.",
       "defaultSeverity": "medium",
       "enabled": true
     },
     {
       "slug": "activtrak_employee_access",
       "name": "Employee Access",
-      "description": "Lists all ActivTrak console users (consumers) with their roles and group access permissions",
+      "description": "Lists all ActivTrak console users (consumers) with email, SSO status, and viewable groups for access-review evidence. Uses Authorization: Bearer auth.",
       "defaultSeverity": "medium",
       "enabled": true
     },
     {
       "slug": "activtrak_device_list",
       "name": "Device List",
-      "description": "Lists all monitored devices (user agents/clients) registered in ActivTrak",
+      "description": "Lists all monitored ActivTrak agents (clients) with id/name/domain/alias. Uses Authorization: Bearer auth.",
       "defaultSeverity": "medium",
       "enabled": true
     }

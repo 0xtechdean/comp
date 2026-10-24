@@ -4,10 +4,19 @@
   "description": "Full-stack observability platform with session replay and error monitoring.",
   "category": "Monitoring",
   "docsUrl": "https://www.highlight.io/docs",
-  "baseUrl": "https://pri.highlight.io",
+  "baseUrl": "https://pri.highlight.run",
   "authConfig": {
-    "type": "api_key",
-    "config": {}
+    "type": "custom",
+    "config": {
+      "setupInstructions": "1. Sign in to https://app.highlight.io as a workspace admin/owner.\n2. Open Workspace Settings > API Tokens.\n3. Create a new API token (or reuse one) that has admin / owner privileges on the workspace you want audited.\n4. Copy the token and paste it above.\n\nNote: Highlight's public API surface for workspace data is limited. The employee-access check uses the private GraphQL endpoint (pri.highlight.run/graphql). If Highlight rejects the workspace_admins query for your token, the check will surface that explicitly so you can either upgrade the token's scope or upload the admin list as manual evidence.",
+      "credentialFields": [
+        {
+          "label": "Highlight API Token",
+          "type": "password",
+          "required": true
+        }
+      ]
+    }
   },
   "capabilities": [
     "checks"

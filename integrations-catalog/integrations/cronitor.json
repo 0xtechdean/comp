@@ -6,7 +6,7 @@
   "docsUrl": "https://cronitor.io/docs/api",
   "baseUrl": "https://cronitor.io",
   "authConfig": {
-    "type": "basic",
+    "type": "custom",
     "config": {
       "setupInstructions": "1. Log in to Cronitor at https://cronitor.io\n2. Go to Settings - API Settings\n3. Copy your SDK Integration API Key (provides full access to monitors, sites, status pages)\n4. Enter it below",
       "credentialFields": [
@@ -16,8 +16,7 @@
           "required": true,
           "helpText": "Found in Cronitor Settings - API Settings. Use the SDK Integration key for full API access."
         }
-      ],
-      "usernameField": "api_key"
+      ]
     }
   },
   "capabilities": [

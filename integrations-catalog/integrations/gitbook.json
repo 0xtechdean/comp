@@ -7,7 +7,17 @@
   "baseUrl": "https://api.gitbook.com/",
   "authConfig": {
     "type": "api_key",
-    "config": {}
+    "config": {
+      "setupInstructions": "1. Sign in to GitBook at app.gitbook.com\n2. Open User Settings (top-left avatar) > Developer settings > API tokens\n3. Create a new API token with read access to your organization\n4. Copy the token and paste it below\n5. Find your Organization ID in the GitBook URL after signing in (the segment after /o/)",
+      "credentialFields": [
+        {
+          "label": "GitBook API Token",
+          "type": "password",
+          "required": true,
+          "helpText": "Your GitBook API token. Create one at app.gitbook.com > User Settings > Developer settings > API tokens."
+        }
+      ]
+    }
   },
   "capabilities": [
     "checks"

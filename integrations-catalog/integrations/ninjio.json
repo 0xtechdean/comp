@@ -1,0 +1,38 @@
+{
+  "slug": "ninjio",
+  "name": "NINJIO",
+  "description": "Security awareness training evidence from NINJIO: year-to-date training episodes released and per-employee completion status.",
+  "category": "Security",
+  "docsUrl": null,
+  "baseUrl": "https://apigw.goninjio.com/api/api_gateway",
+  "authConfig": {
+    "type": "custom",
+    "config": {
+      "setupInstructions": "1. Sign in to the NINJIO Admin Center at admin.goninjio.com as an administrator.\n2. Go to Integration > API Keys and click 'New API Key'.\n3. Give it read access (e.g. name it 'Comp AI') and create it.\n4. Copy the API key and paste it below. Comp AI uses it read-only to report year-to-date training episodes released and employee completion status.",
+      "credentialFields": [
+        {
+          "label": "API Key",
+          "type": "password",
+          "required": true,
+          "helpText": "Create a read API key in the NINJIO Admin Center (admin.goninjio.com > Integration > API Keys > New API Key)."
+        }
+      ]
+    }
+  },
+  "capabilities": [
+    "checks"
+  ],
+  "supportsMultipleConnections": false,
+  "syncSupported": false,
+  "checks": [
+    {
+      "slug": "ninjio_security_awareness_training",
+      "name": "Security Awareness Training",
+      "description": "Reports year-to-date security awareness training from NINJIO: which training episodes were released and when, and which employees have completed vs are still working on their assigned training.",
+      "defaultSeverity": "high",
+      "enabled": true
+    }
+  ],
+  "checkCount": 1,
+  "isActive": true
+}

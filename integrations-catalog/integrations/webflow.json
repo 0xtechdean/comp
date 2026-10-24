@@ -8,7 +8,7 @@
   "authConfig": {
     "type": "api_key",
     "config": {
-      "setupInstructions": "1. Log in to webflow.com\n2. Go to Account Settings > Integrations > API Access\n3. Generate an API token with sites:read scope\n4. Copy the token and paste it below"
+      "setupInstructions": "Step 1 — Log in to webflow.com\nStep 2 — Go to: Account Settings > Workspace Settings > Integrations > API Access\nStep 3 — Click \"Generate API token\" and give it a name (e.g. \"Comp AI\")\n\nStep 4 — CRITICAL: Select scopes\n   In the scope selector, check the box: \"Sites > Read\"\n   (By default NO scopes are selected. Without this checkbox, the integration will fail with \"OAuthForbidden: missing sites:read\".)\n   \nStep 5 — Click \"Generate token\" and copy the token (starts with \"wf-\")\n\nStep 6 — Paste the token below\n\nCommon mistake: clicking Generate without scrolling down to check the Sites > Read box. If your integration fails with a 403 \"missing sites:read\" error, regenerate the token with that scope enabled."
     }
   },
   "capabilities": [

@@ -4,17 +4,29 @@
   "description": "Monitor Frontegg authentication platform for user management and access control compliance",
   "category": "Identity & Access",
   "docsUrl": "https://docs.frontegg.com/reference/overview",
-  "baseUrl": "https://api.frontegg.com/",
+  "baseUrl": "https://api.frontegg.com",
   "authConfig": {
-    "type": "api_key",
+    "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to Frontegg at https://portal.frontegg.com\n2. Go to Environments → [your env] → Settings → API Tokens\n3. Generate an API token\n4. Enter it below",
+      "setupInstructions": "1. Log in to Frontegg portal (https://portal.frontegg.com)\n2. Select the Environment to monitor\n3. Open Settings → API Tokens\n4. Copy the Client ID and Secret (Api-Key)\n5. Choose the matching region (US or EU)",
       "credentialFields": [
         {
-          "label": "API Token",
+          "label": "Client ID",
+          "type": "text",
+          "required": true,
+          "helpText": "Frontegg Portal → [your environment] → Settings → API Tokens → Client ID"
+        },
+        {
+          "label": "Secret",
           "type": "password",
           "required": true,
-          "helpText": "Found in Frontegg Portal → Environments → Settings → API Tokens"
+          "helpText": "Frontegg Portal → [your environment] → Settings → API Tokens → Secret (Api-Key)"
+        },
+        {
+          "label": "Region",
+          "type": "select",
+          "required": true,
+          "helpText": "Select your Frontegg region."
         }
       ]
     }

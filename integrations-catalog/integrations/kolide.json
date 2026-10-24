@@ -27,15 +27,15 @@
   "checks": [
     {
       "slug": "kolide_secure_devices",
-      "name": "Secure Devices",
-      "description": "Reviews Kolide device compliance status",
-      "defaultSeverity": "medium",
+      "name": "All Kolide-managed devices pass security checks",
+      "description": "Verifies that every device enrolled in Kolide has zero unresolved security issues (disk encryption, screen lock, OS updates, MDM, etc.).",
+      "defaultSeverity": "high",
       "enabled": true
     },
     {
       "slug": "kolide_employee_access",
-      "name": "Employee Access",
-      "description": "Lists Kolide users",
+      "name": "No Kolide users have open security issues",
+      "description": "Verifies that every enrolled Kolide user has zero unresolved Kolide issues. Fails if any user has open issues.",
       "defaultSeverity": "medium",
       "enabled": true
     }

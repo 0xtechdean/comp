@@ -4,7 +4,7 @@
   "description": "Monitor Lacework cloud security platform for threat detection and compliance posture",
   "category": "Security",
   "docsUrl": "https://docs.lacework.net/api/v2/docs/",
-  "baseUrl": "https://api.lacework.net/",
+  "baseUrl": "",
   "authConfig": {
     "type": "custom",
     "config": {

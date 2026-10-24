@@ -6,15 +6,27 @@
   "docsUrl": "https://www.jenkins.io/doc/book/using/remote-access-api/",
   "baseUrl": "https://jenkins.example.com",
   "authConfig": {
-    "type": "basic",
+    "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to your Jenkins server\n2. Click your username (top-right) → Configure\n3. Under API Token, click Add new Token → Generate\n4. Copy the token\n5. Enter your Jenkins URL below\n6. Use your Jenkins username and the API token as the password",
+      "setupInstructions": "1. Log in to your Jenkins server.\n2. Click your username (top-right) > Configure.\n3. Under \"API Token\", click \"Add new Token\" > \"Generate\".\n4. Copy the generated token (shown once).\n5. Enter your Jenkins URL, username, and the API token below.\n\nNote: Jenkins is usually self-hosted. The instance must be reachable from CompAI (publicly, via a reverse proxy, or via an allow-listed proxy) for checks to run. The integration user needs at least Overall/Read and Job/Read.",
       "credentialFields": [
         {
           "label": "Jenkins URL",
           "type": "text",
           "required": true,
-          "helpText": "Your Jenkins server URL (e.g. https://jenkins.yourcompany.com). No trailing slash."
+          "helpText": "Your Jenkins server URL (e.g. https://jenkins.yourcompany.com). No trailing slash. The instance must be reachable from CompAI."
+        },
+        {
+          "label": "Jenkins Username",
+          "type": "text",
+          "required": true,
+          "helpText": "The Jenkins username that owns the API token."
+        },
+        {
+          "label": "API Token",
+          "type": "password",
+          "required": true,
+          "helpText": "Jenkins API token. Profile > Configure > API Token > Add new Token > Generate. Treat it like a password."
         }
       ]
     }

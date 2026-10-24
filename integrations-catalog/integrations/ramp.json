@@ -12,7 +12,7 @@
       "scopes": [
         "users:read"
       ],
-      "clientAuthMethod": "body",
+      "clientAuthMethod": "header",
       "supportsRefreshToken": true
     }
   },

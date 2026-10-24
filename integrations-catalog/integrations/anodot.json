@@ -4,17 +4,23 @@
   "description": "Anodot AI-powered monitoring and anomaly detection",
   "category": "Monitoring",
   "docsUrl": "https://docs.anodot.com/",
-  "baseUrl": "https://app.anodot.com/api/v1",
+  "baseUrl": "https://app.anodot.com",
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to Anodot\n2. Settings → Access Tokens\n3. Create a new token\n4. Paste it below",
+      "setupInstructions": "1. Sign in to Anodot as a customer-admin user.\n2. Settings → API Tokens → +Add → name it and copy the Access Key.\n3. Paste it below as the Access Key.\n4. (Optional) Set Base URL to match your Anodot region.",
       "credentialFields": [
         {
-          "label": "Access Token",
+          "label": "Access Key",
           "type": "password",
           "required": true,
-          "helpText": "Anodot → Settings → Access Tokens"
+          "helpText": "Anodot → Settings → API Tokens → create an Access Key as a customer-admin user."
+        },
+        {
+          "label": "Anodot Base URL",
+          "type": "text",
+          "required": false,
+          "helpText": "Region URL. Defaults to https://app.anodot.com. Examples: https://eu.anodot.com, https://ap.anodot.com, https://in.anodot.com, https://app-oregon.anodot.com."
         }
       ]
     }

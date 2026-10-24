@@ -7,7 +7,16 @@
   "baseUrl": "https://api.airtable.com/",
   "authConfig": {
     "type": "api_key",
-    "config": {}
+    "config": {
+      "setupInstructions": "1. Go to https://airtable.com/create/tokens and sign in.\n2. Click \"Create new token\".\n3. Grant the following scopes:\n   - schema.bases:read (list bases and their permission levels)\n   - user.email:read (identify the token owner)\n4. Under \"Access\", choose \"All current and future bases in all current and future workspaces\".\n5. Create the token and copy the value (starts with \"pat\").\n6. Paste it into the Personal Access Token field above.\n\nNote: Listing all workspaces requires an Airtable Enterprise plan and additional enterprise scopes. These checks operate at the bases level so they work for every plan tier.",
+      "credentialFields": [
+        {
+          "label": "Personal Access Token",
+          "type": "password",
+          "required": true
+        }
+      ]
+    }
   },
   "capabilities": [
     "checks"
@@ -18,14 +27,14 @@
     {
       "slug": "airtable_employee_access",
       "name": "Employee Access",
-      "description": "Reviews Airtable bases and verifies workspace is properly configured",
+      "description": "Verifies the Personal Access Token owner and the bases reachable for employee access auditing.",
       "defaultSeverity": "medium",
       "enabled": true
     },
     {
       "slug": "airtable_access_review",
       "name": "Access Review Log",
-      "description": "Reviews Airtable workspace configuration for access controls",
+      "description": "Reviews Airtable bases and their permission levels to support access reviews.",
       "defaultSeverity": "medium",
       "enabled": true
     }

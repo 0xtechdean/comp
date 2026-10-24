@@ -1,0 +1,75 @@
+{
+  "slug": "openstack",
+  "name": "OpenStack",
+  "description": "Open-source private cloud platform. Comp AI connects to the Keystone v3 Identity service to verify availability and list users for access review.",
+  "category": "Cloud",
+  "docsUrl": "https://docs.openstack.org/api-ref/identity/v3/index.html",
+  "baseUrl": "https://www.openstack.org",
+  "authConfig": {
+    "type": "custom",
+    "config": {
+      "setupInstructions": "OpenStack is a self-hosted private cloud platform. To connect Comp AI, the Keystone v3 endpoint must be reachable from the public internet (or from Comp AI egress IPs if you allowlist them).\n\n1. In your OpenStack deployment, create a dedicated read-only user account for Comp AI (or reuse an existing one).\n2. Assign the user the 'reader' role at the **domain** (or system) level so it can list users in /v3/users — a project-level reader role is not sufficient. Via CLI:\n   `openstack role add --user <username> --user-domain <user-domain> --domain <domain> reader`\n   To list users across all domains, use system scope instead:\n   `openstack role add --user <username> --user-domain <user-domain> --system all reader`\n   (The 'reader' role is provided out-of-the-box on OpenStack Rocky [2018] and newer.)\n3. Find the Keystone v3 endpoint URL — usually shown in Horizon: Identity → Endpoints, or via CLI: `openstack endpoint list --service identity`. The full URL ends in /v3 (e.g. https://openstack.example.com:5000/v3 or https://openstack.example.com/identity/v3).\n4. Paste the Auth URL, username, password, project name (used to scope the auth token), user domain name, and project domain name below. The domain names are usually 'Default' unless your deployment uses LDAP-backed or multi-domain identity.\n\nNote: Comp AI only calls the Keystone Identity service for user/auth data. Nova, Neutron, and other OpenStack services are not used.",
+      "credentialFields": [
+        {
+          "label": "Keystone Auth URL",
+          "type": "text",
+          "required": true,
+          "helpText": "Full Keystone v3 URL. Example: https://openstack.example.com:5000/v3"
+        },
+        {
+          "label": "Username",
+          "type": "text",
+          "required": true,
+          "helpText": "Username of the Comp AI service account in OpenStack."
+        },
+        {
+          "label": "Password",
+          "type": "password",
+          "required": true,
+          "helpText": "Password for the Comp AI service account."
+        },
+        {
+          "label": "Project Name",
+          "type": "text",
+          "required": true,
+          "helpText": "OpenStack project (tenant) to scope the auth token to."
+        },
+        {
+          "label": "User Domain Name",
+          "type": "text",
+          "required": false,
+          "helpText": "Domain where the user lives. Usually 'Default'."
+        },
+        {
+          "label": "Project Domain Name",
+          "type": "text",
+          "required": false,
+          "helpText": "Domain where the project lives. Usually 'Default'."
+        }
+      ]
+    }
+  },
+  "capabilities": [
+    "checks"
+  ],
+  "supportsMultipleConnections": false,
+  "syncSupported": false,
+  "checks": [
+    {
+      "slug": "openstack_app_availability",
+      "name": "OpenStack App Availability",
+      "description": "Verifies that the Keystone v3 endpoint is reachable and the configured credentials can obtain a project-scoped token.",
+      "defaultSeverity": "medium",
+      "enabled": true
+    },
+    {
+      "slug": "openstack_employee_access",
+      "name": "OpenStack Employee Access",
+      "description": "Lists Keystone users for periodic access review. Returns total users, enabled vs. disabled counts, and a sample of user records.",
+      "defaultSeverity": "medium",
+      "enabled": true
+    }
+  ],
+  "checkCount": 2,
+  "isActive": true
+}

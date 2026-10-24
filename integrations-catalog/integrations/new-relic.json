@@ -8,13 +8,19 @@
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to New Relic One (one.newrelic.com)\n2. Click your user icon > API keys\n3. Click 'Create a key' and select type 'User'\n4. Copy and paste the key below",
+      "setupInstructions": "1. Sign in to New Relic (one.newrelic.com, or one.eu.newrelic.com for EU accounts).\n2. Open the user menu (bottom left) > API keys.\n3. Click 'Create a key', choose key type 'User', name it (e.g. 'Comp AI'), and create it.\n4. Copy the key (it starts with NRAK-) and paste it below.\n5. Set Region to EU if you sign in at one.eu.newrelic.com; otherwise leave it as US. The wrong region causes authentication failures.",
       "credentialFields": [
         {
           "label": "API Key",
           "type": "password",
           "required": true,
           "helpText": "Create a User API Key under your New Relic profile > API keys"
+        },
+        {
+          "label": "Data center region",
+          "type": "select",
+          "required": false,
+          "helpText": "Select EU if your New Relic account is hosted in the EU (you sign in at one.eu.newrelic.com); otherwise select US. Choosing the wrong region causes authentication (HTTP 403) errors."
         }
       ]
     }
@@ -42,7 +48,7 @@
     {
       "slug": "alert_channels",
       "name": "Incident Response",
-      "description": "Verifies that New Relic alert channels are configured for incident notifications",
+      "description": "Verify New Relic has notification destinations configured (email, Slack, PagerDuty, etc.) via NerdGraph so alert workflows can deliver incidents.",
       "defaultSeverity": "high",
       "enabled": true
     }

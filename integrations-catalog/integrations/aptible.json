@@ -1,0 +1,93 @@
+{
+  "slug": "aptible",
+  "name": "Aptible",
+  "description": "Monitor Aptible for compliance evidence: database backup posture, log and metric drains, service redundancy, endpoint TLS configuration, network exposure, encryption at rest, deploy traceability, and organization member access.",
+  "category": "Cloud",
+  "docsUrl": "https://www.aptible.com/docs",
+  "baseUrl": "https://api.aptible.com",
+  "authConfig": {
+    "type": "custom",
+    "config": {
+      "setupInstructions": "1. In Aptible, invite a dedicated user for Comp AI (e.g. compliance-bot@yourcompany.com): Settings > Members > Invite.\n2. Create a custom read-only role: grant 'Full Visibility' on the environments you want monitored and do NOT grant 'Sensitive Access' or any manage permissions. Assign the user only this role.\n3. Make sure 2FA is NOT enabled on this user — automated checks cannot complete 2FA challenges.\n4. If your organization enforces SSO, add this user to the SSO bypass allowlist (Settings > Single Sign-On).\n5. Enter the user's email and password below.",
+      "credentialFields": [
+        {
+          "label": "Email",
+          "type": "text",
+          "required": true,
+          "helpText": "Email of the dedicated read-only Aptible user created for Comp AI."
+        },
+        {
+          "label": "Password",
+          "type": "password",
+          "required": true,
+          "helpText": "Password of the dedicated read-only user. Stored encrypted and used only to mint short-lived read tokens."
+        }
+      ]
+    }
+  },
+  "capabilities": [
+    "checks"
+  ],
+  "supportsMultipleConnections": false,
+  "syncSupported": false,
+  "checks": [
+    {
+      "slug": "aptible_backup_posture",
+      "name": "Backup Posture",
+      "description": "Verifies automatic backups are enabled for every Aptible managed database and records the environment backup retention policy (daily/monthly/yearly, PITR).",
+      "defaultSeverity": "high",
+      "enabled": true
+    },
+    {
+      "slug": "aptible_monitoring",
+      "name": "Monitoring & Alerting",
+      "description": "Verifies each Aptible environment routes logs and metrics to a monitoring destination via log drains and metric drains; production environments without any drain fail.",
+      "defaultSeverity": "medium",
+      "enabled": true
+    },
+    {
+      "slug": "aptible_redundancy",
+      "name": "Service Redundancy",
+      "description": "Verifies app services in production Aptible environments run 2+ containers so Aptible distributes them across availability zones for high availability.",
+      "defaultSeverity": "medium",
+      "enabled": true
+    },
+    {
+      "slug": "aptible_tls_https",
+      "name": "TLS / HTTPS",
+      "description": "Verifies every public Aptible endpoint terminates TLS via a default-domain certificate, Managed TLS (ACME), or a custom certificate; raw TCP endpoints are flagged for manual review.",
+      "defaultSeverity": "medium",
+      "enabled": true
+    },
+    {
+      "slug": "aptible_public_exposure",
+      "name": "Network Exposure",
+      "description": "Inventories Aptible endpoints as internal, IP-filtered, or fully public — informational evidence of the network exposure surface.",
+      "defaultSeverity": "info",
+      "enabled": true
+    },
+    {
+      "slug": "aptible_encryption_at_rest",
+      "name": "Encryption at Rest",
+      "description": "Records that Aptible encrypts database volumes at rest by default (platform-enforced), enumerating every managed database as evidence.",
+      "defaultSeverity": "info",
+      "enabled": true
+    },
+    {
+      "slug": "aptible_deploy_traceability",
+      "name": "Deploy Traceability",
+      "description": "Records git ref/commit traceability for every deployed Aptible app from deploy operations and code scan results; Docker-image deploys are noted for manual CI review.",
+      "defaultSeverity": "info",
+      "enabled": true
+    },
+    {
+      "slug": "aptible_employee_access",
+      "name": "Employee Access",
+      "description": "Lists every member of the Aptible organization with owner/superuser flag, email verification, and 2FA status where reported — one result per person.",
+      "defaultSeverity": "info",
+      "enabled": true
+    }
+  ],
+  "checkCount": 8,
+  "isActive": true
+}

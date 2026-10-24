@@ -26,6 +26,13 @@
   "syncSupported": false,
   "checks": [
     {
+      "slug": "humaans_app_availability",
+      "name": "Humaans App Availability",
+      "description": "Verifies the Humaans API is reachable with the supplied token.",
+      "defaultSeverity": "high",
+      "enabled": true
+    },
+    {
       "slug": "humaans_employee_access",
       "name": "Employee Access",
       "description": "Lists Humaans employees to verify HR records are up to date",
@@ -33,6 +40,6 @@
       "enabled": true
     }
   ],
-  "checkCount": 1,
+  "checkCount": 2,
   "isActive": true
 }

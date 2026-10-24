@@ -8,31 +8,31 @@
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to your Mosyle admin console\n2. Go to Organization > API Integration\n3. Enable the API and generate an Access Token\n4. Copy the Access Token\n5. Enter the token along with your admin email and password",
+      "setupInstructions": "Mosyle has two products with separate APIs; pick the one that matches your subscription:\n - Mosyle Business (Enterprise) — for businesses, uses businessapi.mosyle.com/v1\n - Mosyle Manager (Education)  — for schools, uses managerapi.mosyle.com/v2\nSelecting the wrong environment will always fail — Mosyle treats them as separate APIs.\n\nSteps:\n1. Sign in to your Mosyle admin console (mybusiness.mosyle.com or myschool.mosyle.com).\n2. Go to Organization → API Integration.\n3. Enable the API Integration if it is not already enabled.\n4. Generate a new Access Token (or copy an existing one).\n5. Below, fill in: the Mosyle Environment that matches your product, the Access Token, and the Admin Email and Password of a Mosyle administrator user. Mosyle Business requires the admin email/password — the Access Token alone is not sufficient because Mosyle exchanges them for a session token on every connection.\n\nNotes:\n - If you regenerate the Access Token, paste the new value here and re-run the check.\n - The Admin Email and Password are the same credentials you use to log into the Mosyle web console.",
       "credentialFields": [
         {
           "label": "Mosyle Environment",
           "type": "select",
           "required": true,
-          "helpText": "Select your Mosyle product type"
+          "helpText": "Select your Mosyle product. Business = businessapi.mosyle.com/v1; Manager = managerapi.mosyle.com/v2."
         },
         {
           "label": "Access Token",
           "type": "password",
           "required": true,
-          "helpText": "API access token from Organization > API Integration"
+          "helpText": "Generated in your Mosyle admin console: Organization → API Integration."
         },
         {
           "label": "Admin Email",
           "type": "text",
           "required": true,
-          "helpText": "Email address of an admin user for API authentication"
+          "helpText": "Email of a Mosyle administrator user. Mosyle Business exchanges this with your password (plus the Access Token) for a session token on every connection."
         },
         {
           "label": "Admin Password",
           "type": "password",
           "required": true,
-          "helpText": "Password for the admin user account"
+          "helpText": "Password of the Mosyle administrator user above."
         }
       ]
     }

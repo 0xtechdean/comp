@@ -35,14 +35,14 @@ export function landingPageHTML(origin: string): string {
     "args": [
       "-y",
       "mcp-remote@0.1.25",
-      `${o}/sse`,
+      `${o}/mcp`,
       "--header",
       "apikey:${APIKEY}",
     ],
     "env": { "APIKEY": "YOUR_VALUE_HERE" },
   };
   const codexConfig = `[mcp_servers.CompAi]
-url = "${o}/sse"
+url = "${o}/mcp"
 http_headers = { "apikey" = "YOUR_APIKEY" }`;
 
   return `
@@ -930,7 +930,7 @@ http_headers = { "apikey" = "YOUR_APIKEY" }`;
         <h1>Instructions</h1>
         <p>One-click installation for Claude Desktop users</p>
         <div class="instruction-item">
-          <a href="https://github.com/trycompai/comp/releases/download/v0.2.5/mcp-server.mcpb" download="mcp-server.mcpb" class="action-button header-action" style="display: inline-flex; margin-bottom: 16px;">
+          <a href="https://github.com/trycompai/comp/releases/download/apps/mcp-server/v0.2.8/mcp-server.mcpb" download="mcp-server.mcpb" class="action-button header-action" style="display: inline-flex; margin-bottom: 16px;">
             📥 Download MCP Bundle
           </a>
         </div>

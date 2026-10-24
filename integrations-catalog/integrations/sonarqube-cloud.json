@@ -6,8 +6,18 @@
   "docsUrl": "https://sonarcloud.io/web_api",
   "baseUrl": "https://sonarcloud.io",
   "authConfig": {
-    "type": "api_key",
-    "config": {}
+    "type": "custom",
+    "config": {
+      "setupInstructions": "1. Log in to SonarQube Cloud (sonarcloud.io)\n2. Go to My Account > Security\n3. Generate a new token\n4. Base64-encode it as token:\n5. Paste the encoded string below",
+      "credentialFields": [
+        {
+          "label": "Base64 Encoded Token",
+          "type": "password",
+          "required": true,
+          "helpText": "Base64-encode 'your_token:' (with trailing colon). Create a token in SonarQube Cloud > My Account > Security."
+        }
+      ]
+    }
   },
   "capabilities": [
     "checks"

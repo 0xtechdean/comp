@@ -4,10 +4,24 @@
   "description": "Monitor Amplitude projects and user access for product analytics compliance",
   "category": "Monitoring",
   "docsUrl": "https://www.docs.developers.amplitude.com/analytics/apis/management-api/",
-  "baseUrl": "https://management.us.amplitude.com/",
+  "baseUrl": "https://core.amplitude.com",
   "authConfig": {
-    "type": "api_key",
-    "config": {}
+    "type": "custom",
+    "config": {
+      "setupInstructions": "1. Sign in to Amplitude as an Organization Admin.\n2. Go to Settings > Organization > SCIM (requires the SCIM/SSO add-on on your plan).\n3. Generate a SCIM API token and copy it (starts with scim_).\n4. Paste the token above and select your data region (US or EU).\n5. Note: SCIM endpoints require the SCIM add-on. If your plan does not include SCIM, the Employee Access check will return an actionable failure.",
+      "credentialFields": [
+        {
+          "label": "SCIM Token",
+          "type": "password",
+          "required": true
+        },
+        {
+          "label": "Region",
+          "type": "select",
+          "required": true
+        }
+      ]
+    }
   },
   "capabilities": [
     "checks"

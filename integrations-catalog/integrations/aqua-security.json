@@ -8,13 +8,25 @@
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to cloud.aquasec.com\n2. Settings → API Keys\n3. Create an API key\n4. Paste it below",
+      "setupInstructions": "1. Log in to cloud.aquasec.com (Aqua Cloud / CSPM)\n2. Go to Settings → API Keys\n3. Generate an API key — copy both the API Key and the API Secret (secret is shown once)\n4. Paste them below. If your tenant is hosted in EU, change the endpoint to https://eu-1.api.cloudsploit.com",
       "credentialFields": [
         {
           "label": "API Key",
           "type": "password",
           "required": true,
-          "helpText": "Aqua Platform → Settings → API Keys"
+          "helpText": "Aqua Platform → Settings → API Keys → API Key"
+        },
+        {
+          "label": "API Secret",
+          "type": "password",
+          "required": true,
+          "helpText": "Aqua Platform → Settings → API Keys → API Secret (shown once on key creation)"
+        },
+        {
+          "label": "API Endpoint",
+          "type": "text",
+          "required": false,
+          "helpText": "Default: https://api.cloudsploit.com (US). For EU use https://eu-1.api.cloudsploit.com"
         }
       ]
     }

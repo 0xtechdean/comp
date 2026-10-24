@@ -8,13 +8,19 @@
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to HackerOne at https://hackerone.com\n2. Go to Settings → API Token\n3. Create a new token with a name (identifier) and token value\n4. Base64 encode 'identifier:api_token' and enter below",
+      "setupInstructions": "1. Log in to HackerOne at https://hackerone.com\n2. Go to your organization → Settings → API Tokens (org-admin required)\n3. Click 'Create API Token', enter an identifier name, copy the generated token value (shown once)\n4. Paste the identifier and token below — Comp will base64-encode them for HTTP Basic auth",
       "credentialFields": [
         {
-          "label": "Encoded API Credentials",
+          "label": "API Identifier",
+          "type": "text",
+          "required": true,
+          "helpText": "The API identifier (username) of an API token created in HackerOne. Create at https://hackerone.com/organizations/<your-org>/api_tokens."
+        },
+        {
+          "label": "API Token",
           "type": "password",
           "required": true,
-          "helpText": "Base64 encode 'identifier:api_token'. Create API credentials in HackerOne → Settings → API Token. Command: echo -n 'identifier:token' | base64"
+          "helpText": "The API token value generated alongside the identifier. HackerOne shows it only once at creation."
         }
       ]
     }

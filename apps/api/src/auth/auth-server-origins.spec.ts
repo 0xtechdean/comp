@@ -168,19 +168,7 @@ describe('isStaticTrustedOrigin', () => {
 });
 
 describe('getCustomDomains (structural)', () => {
-  it('trusted-origins.ts should NOT filter by domainVerified in CORS domain query', () => {
-    // Custom domains should be allowed for CORS as soon as they are configured
-    // by an admin, not only after DNS verification completes. Vercel can serve
-    // the trust portal before our domainVerified flag is set, causing CORS
-    // failures on client-side API calls.
-    //
-    // This guard has regressed once already: c21c6565d (2026-04-03) re-added the
-    // filter as a one-line change and left this test failing for months, which
-    // nobody noticed because the suite was red. It is not a credential-exposure
-    // control either — session cookies are SameSite=Lax, so a cross-site request
-    // from a custom domain never carries one. If you want to stop customers
-    // injecting arbitrary origins into this allowlist, verify at add-time or
-    // scope CORS per organization; do not reinstate this filter.
+  it('trusted-origins.ts only trusts verified published custom domains', () => {
     const fs = require('fs');
     const path = require('path');
     const authServer = fs.readFileSync(
@@ -195,8 +183,7 @@ describe('getCustomDomains (structural)', () => {
     expect(fnMatch).toBeTruthy();
     const fnBody = fnMatch![0];
 
-    // Must NOT require domainVerified — that flag lags behind Vercel's own verification
-    expect(fnBody).not.toContain('domainVerified');
+    expect(fnBody).toContain('domainVerified: true');
 
     // Must still filter by published status
     expect(fnBody).toContain("status: 'published'");

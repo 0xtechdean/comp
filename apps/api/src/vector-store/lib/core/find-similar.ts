@@ -1,4 +1,5 @@
 import { vectorIndex } from './client';
+import { organizationFilter } from './filter';
 import {
   generateEmbedding,
   batchGenerateEmbeddings,
@@ -37,6 +38,11 @@ const MAX_TOP_K = 100;
 // app-side findSimilarContent limit used by the same auto-answer flow.
 const MAX_RESULTS = 5;
 
+/** Validate organization IDs with the shared vector-filter allowlist (GH-043/GH-103). */
+export function assertSafeOrganizationId(organizationId: string): void {
+  organizationFilter(organizationId);
+}
+
 /**
  * Finds similar content using semantic search in Upstash Vector
  * Optimized for RAG (Retrieval-Augmented Generation) answer generation
@@ -62,6 +68,8 @@ export async function findSimilarContent(
     return [];
   }
 
+  assertSafeOrganizationId(organizationId);
+
   try {
     // Generate embedding for the question
     const queryEmbedding = await generateEmbedding(question);
@@ -72,7 +80,7 @@ export async function findSimilarContent(
       vector: queryEmbedding,
       topK: MAX_TOP_K,
       includeMetadata: true,
-      filter: `organizationId = "${organizationId}"`,
+      filter: organizationFilter(organizationId),
     });
 
     // Filter by minimum similarity score, then keep only the highest-scoring
@@ -148,6 +156,8 @@ export async function findSimilarContentBatch(
     return [];
   }
 
+  assertSafeOrganizationId(organizationId);
+
   const startTime = Date.now();
 
   try {
@@ -180,7 +190,7 @@ export async function findSimilarContentBatch(
             vector: embedding,
             topK: MAX_TOP_K,
             includeMetadata: true,
-            filter: `organizationId = "${organizationId}"`,
+            filter: organizationFilter(organizationId),
           });
           return { index, results };
         } catch (error) {

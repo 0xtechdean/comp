@@ -1,0 +1,63 @@
+{
+  "slug": "odoo",
+  "name": "Odoo",
+  "description": "Audit Odoo ERP for application availability and employee access via the External JSON-RPC API.",
+  "category": "HR & People",
+  "docsUrl": "https://www.odoo.com/documentation/master/developer/reference/external_api.html",
+  "baseUrl": "https://www.odoo.com/",
+  "authConfig": {
+    "type": "custom",
+    "config": {
+      "setupInstructions": "Odoo exposes a JSON-RPC API at /jsonrpc that accepts a database name + username + API key. To connect:\n\nStep 1 — Generate an API key\n1. In Odoo, click your avatar (top-right) and choose Preferences (older versions: My Profile)\n2. Open the Account Security tab\n3. Click New API Key, give it a name (e.g. \"Comp AI\"), and copy the key — it is only shown once\n\nNote: Odoo Online accounts must have a local password set on the user before API keys can be generated (avatar > Preferences > Account Security > Change Password). On Odoo 19+ API keys have a maximum duration of three months and must be rotated.\n\nStep 2 — Find your database name\n   - Odoo Online: it's your company subdomain (e.g. \"acme\" for acme.odoo.com)\n   - Self-hosted: it's the database name configured in odoo.conf, or visible in the login screen URL as `?db=...`\n\nStep 3 — Paste all four values below\n   - Instance URL (with https://, no trailing slash needed — we normalize it)\n   - Database name\n   - Your administrator email / login\n   - The API key from step 1\n\nThe connecting user needs read access to res.users and (for the Employee Access check) read access to hr.employee. If the HR module is not installed, the Employee Access check automatically falls back to listing internal users from res.users.",
+      "credentialFields": [
+        {
+          "label": "Odoo Instance URL",
+          "type": "text",
+          "required": true,
+          "helpText": "Your Odoo instance URL — for Odoo Online it looks like https://yourcompany.odoo.com, for self-hosted it's your installation's domain."
+        },
+        {
+          "label": "Database Name",
+          "type": "text",
+          "required": true,
+          "helpText": "The Odoo database name. For Odoo Online it's usually your company subdomain (e.g. \"yourcompany\"). You can confirm it in the Odoo login screen URL parameter `?db=...`."
+        },
+        {
+          "label": "Username (Email)",
+          "type": "text",
+          "required": true,
+          "helpText": "The Odoo login (usually an email) of an administrator account."
+        },
+        {
+          "label": "API Key",
+          "type": "password",
+          "required": true,
+          "helpText": "Generate at Odoo > Settings > Users > Account Security > Developer API Keys > New API Key. Do not paste your master password — use a scoped API key."
+        }
+      ]
+    }
+  },
+  "capabilities": [
+    "checks"
+  ],
+  "supportsMultipleConnections": false,
+  "syncSupported": false,
+  "checks": [
+    {
+      "slug": "odoo_app_availability",
+      "name": "Odoo App Availability",
+      "description": "Verifies the Odoo instance is reachable, the database accepts the credentials, and a basic query returns successfully.",
+      "defaultSeverity": "medium",
+      "enabled": true
+    },
+    {
+      "slug": "odoo_employee_access",
+      "name": "Odoo Employee Access",
+      "description": "Lists employees (or internal users) so you can review who has access to the Odoo platform.",
+      "defaultSeverity": "medium",
+      "enabled": true
+    }
+  ],
+  "checkCount": 2,
+  "isActive": true
+}

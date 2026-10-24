@@ -8,7 +8,7 @@
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Go to Azure Portal → Microsoft Entra ID → App registrations\n2. Click 'New registration', name it (e.g. 'CompAI Defender'), register\n3. Note the Application (client) ID and Directory (tenant) ID\n4. Go to 'Certificates & secrets' → 'New client secret', copy the value\n5. Go to 'API permissions' → 'Add a permission' → 'APIs my organization uses'\n6. Search for 'Microsoft Threat Protection' (or 'WindowsDefenderATP')\n7. Select 'Application permissions' and add: Machine.Read.All, Alert.Read.All, Vulnerability.Read.All\n8. Click 'Grant admin consent' for your organization\n9. Paste the Tenant ID, Client ID, and Client Secret below",
+      "setupInstructions": "1. Go to Azure Portal → Microsoft Entra ID → App registrations → New registration (e.g. 'CompAI Defender')\n2. From the Overview page, copy the Application (client) ID and Directory (tenant) ID\n3. Go to Certificates & secrets → New client secret, copy the value (only shown once)\n4. Go to API permissions → Add a permission → APIs my organization uses\n   IMPORTANT: pick \"APIs my organization uses\", NOT \"Microsoft Graph\".\n5. Search for and select WindowsDefenderATP (the Microsoft Defender for Endpoint API)\n6. Choose Application permissions and add:\n   - Machine.Read.All\n   - Alert.Read.All\n   - Vulnerability.Read.All\n7. Click 'Grant admin consent' for your organization\n8. Paste the Tenant ID, Client ID, and Client Secret below\n\nNotes:\n - The API is registered in Azure AD under the name 'WindowsDefenderATP' even though Microsoft brands the product as Microsoft Defender for Endpoint.\n - The OAuth resource/scope is https://api.securitycenter.microsoft.com/.default — Microsoft has consolidated the API URL to api.security.microsoft.com but the token resource remains the legacy URL.",
       "credentialFields": [
         {
           "label": "Tenant ID",
@@ -56,7 +56,7 @@
       "name": "Vulnerability Scanning",
       "description": "Retrieves vulnerabilities detected by Microsoft Defender for Endpoint and reports critical and high severity findings.",
       "defaultSeverity": "high",
-      "enabled": true
+      "enabled": false
     }
   ],
   "checkCount": 3,

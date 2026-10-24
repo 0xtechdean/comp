@@ -7,7 +7,23 @@
   "baseUrl": "https://app.pendo.io/",
   "authConfig": {
     "type": "api_key",
-    "config": {}
+    "config": {
+      "setupInstructions": "1. Log in to Pendo\n2. Settings > Integrations > Integration Keys\n3. Create or copy an integration key\n4. Paste below and select your data region",
+      "credentialFields": [
+        {
+          "label": "Integration Key",
+          "type": "password",
+          "required": true,
+          "helpText": "From Pendo Settings > Integrations > Integration Keys."
+        },
+        {
+          "label": "Data Region",
+          "type": "select",
+          "required": false,
+          "helpText": "Select EU if your Pendo subscription is hosted in the EU data center."
+        }
+      ]
+    }
   },
   "capabilities": [
     "checks"

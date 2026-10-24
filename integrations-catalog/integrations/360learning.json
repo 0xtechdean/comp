@@ -8,7 +8,7 @@
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to 360Learning as an admin\n2. Go to Settings > API\n3. Copy your Company ID and API Key (v1 credentials)\n4. If you don't have API credentials, contact your 360Learning Customer Success Partner (CSP)\n5. Enter both values below\n\nNote: API v2 credentials are NOT compatible. Use API v1 credentials only.",
+      "setupInstructions": "1. Log in to 360Learning as an admin\n2. Go to Settings > API\n3. Copy your Company ID and API Key (v1 credentials)\n4. If you don't have API credentials, contact your 360Learning Customer Success Partner (CSP)\n5. Enter both values below\n\nNote: API v2 credentials are NOT compatible. Use API v1 credentials only.\n\nNote: this integration uses 360Learning API v1, which the vendor plans to sunset in mid-2027. A migration to API v2 will be required before then.",
       "credentialFields": [
         {
           "label": "API Key",

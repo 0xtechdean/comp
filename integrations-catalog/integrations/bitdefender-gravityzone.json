@@ -41,7 +41,7 @@
     {
       "slug": "device_inventory",
       "name": "Device List",
-      "description": "Lists managed and unmanaged devices in the network inventory",
+      "description": "Lists all Bitdefender GravityZone endpoints with managed status, agent version, and OS details. Uses getEndpointsList API which returns only actual endpoints (not folders or groups).",
       "defaultSeverity": "medium",
       "enabled": true
     },

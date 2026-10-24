@@ -8,13 +8,13 @@
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to Honeybadger at https://app.honeybadger.io\n2. Go to Profile → Authentication Tokens\n3. Copy your API key\n4. Base64 encode 'api_key:' (with colon, empty password)\n5. Enter the encoded value below",
+      "setupInstructions": "1. Log in to Honeybadger at https://app.honeybadger.io\n2. Click your profile (top right) > \"Authentication\".\n3. Copy your \"Personal Auth Token\" (NOT a project API key).\n4. Paste it below — Comp will use it with HTTP Basic auth (token as username).",
       "credentialFields": [
         {
-          "label": "Encoded API Key",
+          "label": "Personal Auth Token",
           "type": "password",
           "required": true,
-          "helpText": "Base64 encode 'api_key:' (your API key with a colon and empty password). Command: echo -n 'your_api_key:' | base64"
+          "helpText": "Your Honeybadger Personal Auth Token (from Profile > Authentication). Used as the HTTP Basic auth username; Comp adds the empty password automatically."
         }
       ]
     }
@@ -28,14 +28,14 @@
     {
       "slug": "honeybadger_monitoring",
       "name": "Monitoring & Alerting",
-      "description": "Verifies Honeybadger projects are configured for error monitoring",
+      "description": "Verifies Honeybadger projects exist and are actively monitoring application errors.",
       "defaultSeverity": "medium",
       "enabled": true
     },
     {
       "slug": "honeybadger_incident_response",
       "name": "Incident Response",
-      "description": "Verifies Honeybadger uptime checks are configured for availability monitoring",
+      "description": "Verifies Honeybadger faults (incidents) are being tracked per project and surfaces unresolved faults for triage.",
       "defaultSeverity": "medium",
       "enabled": true
     }

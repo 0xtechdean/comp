@@ -33,16 +33,50 @@ export class AutomationsService {
     };
   }
 
-  async findById(automationId: string) {
+  /**
+   * Confirms the automation exists, belongs to `taskId`, and that task
+   * belongs to `organizationId`. The controller only verifies the task in
+   * the URL — this closes the gap where `automationId` could otherwise
+   * reference a different task/org entirely.
+   */
+  private async verifyAutomationAccess({
+    organizationId,
+    taskId,
+    automationId,
+  }: {
+    organizationId: string;
+    taskId: string;
+    automationId: string;
+  }) {
     const automation = await db.evidenceAutomation.findFirst({
       where: {
         id: automationId,
+        taskId,
+        task: { organizationId },
       },
     });
 
     if (!automation) {
       throw new NotFoundException('Automation not found');
     }
+
+    return automation;
+  }
+
+  async findById({
+    organizationId,
+    taskId,
+    automationId,
+  }: {
+    organizationId: string;
+    taskId: string;
+    automationId: string;
+  }) {
+    const automation = await this.verifyAutomationAccess({
+      organizationId,
+      taskId,
+      automationId,
+    });
 
     return {
       success: true,
@@ -80,17 +114,19 @@ export class AutomationsService {
     };
   }
 
-  async update(automationId: string, updateAutomationDto: UpdateAutomationDto) {
-    // Verify automation exists and belongs to organization
-    const existingAutomation = await db.evidenceAutomation.findFirst({
-      where: {
-        id: automationId,
-      },
-    });
-
-    if (!existingAutomation) {
-      throw new NotFoundException('Automation not found');
-    }
+  async update({
+    organizationId,
+    taskId,
+    automationId,
+    updateAutomationDto,
+  }: {
+    organizationId: string;
+    taskId: string;
+    automationId: string;
+    updateAutomationDto: UpdateAutomationDto;
+  }) {
+    // Verify automation exists and belongs to the task/organization
+    await this.verifyAutomationAccess({ organizationId, taskId, automationId });
 
     const { scheduleFrequency, ...rest } = updateAutomationDto;
 
@@ -115,17 +151,17 @@ export class AutomationsService {
     };
   }
 
-  async delete(automationId: string) {
-    // Verify automation exists and belongs to organization
-    const existingAutomation = await db.evidenceAutomation.findFirst({
-      where: {
-        id: automationId,
-      },
-    });
-
-    if (!existingAutomation) {
-      throw new NotFoundException('Automation not found');
-    }
+  async delete({
+    organizationId,
+    taskId,
+    automationId,
+  }: {
+    organizationId: string;
+    taskId: string;
+    automationId: string;
+  }) {
+    // Verify automation exists and belongs to the task/organization
+    await this.verifyAutomationAccess({ organizationId, taskId, automationId });
 
     // Delete the automation
     await db.evidenceAutomation.delete({
@@ -140,7 +176,30 @@ export class AutomationsService {
     };
   }
 
-  async createVersion(automationId: string, data: CreateVersionDto) {
+  async createVersion({
+    organizationId,
+    taskId,
+    automationId,
+    data,
+  }: {
+    organizationId: string;
+    taskId: string;
+    automationId: string;
+    data: CreateVersionDto;
+  }) {
+    // Verify automation exists and belongs to the task/organization
+    await this.verifyAutomationAccess({ organizationId, taskId, automationId });
+
+    // Bind the caller-supplied scriptKey to this organization's S3 prefix so a
+    // caller can't register another tenant's object as this automation's
+    // version. Reject '..' segments that could escape the prefix.
+    if (
+      !data.scriptKey.startsWith(`${organizationId}/`) ||
+      data.scriptKey.includes('..')
+    ) {
+      throw new NotFoundException('Automation script not found');
+    }
+
     try {
       const [version] = await db.$transaction([
         db.evidenceAutomationVersion.create({
@@ -176,7 +235,18 @@ export class AutomationsService {
     }
   }
 
-  async findRunsByAutomationId(automationId: string) {
+  async findRunsByAutomationId({
+    organizationId,
+    taskId,
+    automationId,
+  }: {
+    organizationId: string;
+    taskId: string;
+    automationId: string;
+  }) {
+    // Verify automation exists and belongs to the task/organization
+    await this.verifyAutomationAccess({ organizationId, taskId, automationId });
+
     const runs = await db.evidenceAutomationRun.findMany({
       where: {
         evidenceAutomationId: automationId,
@@ -194,7 +264,22 @@ export class AutomationsService {
     return runs;
   }
 
-  async listVersions(automationId: string, limit?: number, offset?: number) {
+  async listVersions({
+    organizationId,
+    taskId,
+    automationId,
+    limit,
+    offset,
+  }: {
+    organizationId: string;
+    taskId: string;
+    automationId: string;
+    limit?: number;
+    offset?: number;
+  }) {
+    // Verify automation exists and belongs to the task/organization
+    await this.verifyAutomationAccess({ organizationId, taskId, automationId });
+
     const versions = await db.evidenceAutomationVersion.findMany({
       where: {
         evidenceAutomationId: automationId,

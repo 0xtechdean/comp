@@ -6,11 +6,23 @@
   "docsUrl": "https://developer.aircall.io/api-references/",
   "baseUrl": "https://api.aircall.io",
   "authConfig": {
-    "type": "basic",
+    "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to Aircall Dashboard at https://dashboard.aircall.io\n2. Go to Company Settings\n3. In the API Keys section, click 'Add a new API key'\n4. Copy the API ID and API Token\n5. Enter them below",
-      "usernameField": "api_id",
-      "passwordField": "api_token"
+      "setupInstructions": "IMPORTANT: Do not enter your Aircall account email and password here. Aircall requires a separate API key, which generates an API ID and API Token. Paste those values below — NOT your account login.\n\nYou must be an Admin or Owner in Aircall to create company-level API keys.\n\n1. Log in to the Aircall Dashboard at https://dashboard.aircall.io\n2. Click on the gear icon, then go to Company Settings > Integrations & API > API Keys\n3. Click \"Add a new API key\" and give it a name (e.g. \"Comp AI\")\n4. Aircall will show you the API ID and API Token once. Both are long random strings.\n5. Copy BOTH values immediately — they are shown only once\n6. Paste the API ID into the \"API ID\" field below and the API Token into the \"API Token\" field\n\nIf the integration shows 403 Forbidden errors later, the API key has likely been regenerated or revoked on the Aircall side. Create a new one and update the values here.",
+      "credentialFields": [
+        {
+          "label": "API ID",
+          "type": "text",
+          "required": true,
+          "helpText": "The API ID generated in Aircall Dashboard > Company Settings > Integrations & API > API Keys. This is a long random string, NOT your Aircall account email."
+        },
+        {
+          "label": "API Token",
+          "type": "password",
+          "required": true,
+          "helpText": "The API Token shown alongside the API ID. This is a long random string, NOT your Aircall account password. Aircall shows it only once at creation time."
+        }
+      ]
     }
   },
   "capabilities": [

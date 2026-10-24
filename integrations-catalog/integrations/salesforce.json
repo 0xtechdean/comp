@@ -8,7 +8,7 @@
   "authConfig": {
     "type": "oauth2",
     "config": {
-      "setupInstructions": "1. Go to Salesforce > Setup > App Manager > New Connected App\n2. Enable OAuth Settings\n3. Set callback URL to: https://api.trycomp.ai/v1/integrations/oauth/callback\n4. Add scopes: Access (api), ID (id), Offline (offline_access)\n5. Copy Consumer Key (Client ID) and Secret\n6. After connecting, enter your Salesforce instance URL (e.g. https://yourorg.my.salesforce.com)",
+      "setupInstructions": "1. In Salesforce: Setup → App Manager → New Connected App.\n2. Enable OAuth Settings.\n3. Set the Callback URL to: https://api.trycomp.ai/v1/integrations/oauth/callback\n4. Add OAuth scopes: Access the identity URL service (id), Manage user data via APIs (api), Perform requests at any time (refresh_token, offline_access).\n5. Save the Connected App. Copy the Consumer Key (Client ID) and Consumer Secret.\n6. Wait a few minutes for the Connected App to propagate, then click Connect in Comp AI and sign in to your Salesforce org.\n\nNotes:\n - This integration currently supports Salesforce Production orgs (login.salesforce.com). Sandbox (test.salesforce.com) is not yet supported.\n - The Salesforce instance URL is discovered automatically after connection — no manual entry needed.",
       "scopes": [
         "id",
         "api",
@@ -29,7 +29,7 @@
       "name": "Employee Access",
       "description": "Reviews Salesforce users and verifies only active users have access",
       "defaultSeverity": "medium",
-      "enabled": true
+      "enabled": false
     },
     {
       "slug": "salesforce_contact_information",

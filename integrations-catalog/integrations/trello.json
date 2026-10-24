@@ -8,7 +8,7 @@
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Go to https://trello.com/power-ups/admin\n2. Create a new Power-Up (or select an existing one)\n3. Click on your Power-Up → go to the API Key tab\n4. Copy your API Key\n5. Click the Token link next to your key → click Allow to authorize\n6. Copy the generated token\n7. Enter your API Key and Token below",
+      "setupInstructions": "1. Go to https://trello.com/power-ups/admin and create a new Power-Up (or open an existing one) for your workspace.\n2. Open your Power-Up > API Key tab. If no key exists yet, click 'Generate a new API Key'.\n3. Copy the API Key shown at the top — this is the long key, NOT the Secret listed next to it. (You do NOT need to set an 'Allowed Origin' for this connection.)\n4. Generate a read-only token that never expires: open the URL below in your browser, replacing YOUR_API_KEY with the key from step 3, then click 'Allow' and copy the token shown.\n   https://trello.com/1/authorize?expiration=never&scope=read&response_type=token&name=Comp%20AI&key=YOUR_API_KEY\n5. Enter the API Key (step 3) and the Token (step 4) below. Both must belong to the same Power-Up.\nTip: the simple 'Token' link on the API Key page issues a token that expires in 30 days; using the URL above keeps the connection from breaking later.",
       "credentialFields": [
         {
           "label": "API Key",

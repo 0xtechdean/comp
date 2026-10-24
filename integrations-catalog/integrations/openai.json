@@ -8,13 +8,13 @@
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to platform.openai.com\n2. Go to API Keys\n3. Create a new secret key\n4. Paste it below",
+      "setupInstructions": "The OpenAI integration requires an Admin API Key (not a regular API key) to read organization users, projects, and audit data.\n\nStep 1 — Create an Admin API Key\n1. Sign in to https://platform.openai.com as an Organization Owner\n2. Go to Settings > Organization > Admin keys (https://platform.openai.com/settings/organization/admin-keys)\n3. Click Create new key\n4. Name it (e.g. \"Comp AI\") and grant these scopes:\n   - api.management.read   (required for user/project listings)\n   - api.model.read        (required for model availability checks)\n5. Copy the key (starts with \"sk-admin-\") — it's shown only once\n\nImportant: Regular API keys (sk-..., sk-proj-...) cannot list organization users and will return HTTP 401/403 with \"Missing scopes\" errors.\n\nStep 2 — Paste the Admin key in the integration settings below",
       "credentialFields": [
         {
           "label": "API Key",
           "type": "password",
           "required": true,
-          "helpText": "OpenAI → Platform → API Keys → Create new secret key"
+          "helpText": "Admin API key (starts with sk-admin-) from Settings > Organization > Admin keys"
         }
       ]
     }

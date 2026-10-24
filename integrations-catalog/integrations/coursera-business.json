@@ -4,7 +4,7 @@
   "description": "Coursera for Business provides enterprise learning and compliance training, enabling organizations to upskill employees with courses from top universities and industry leaders.",
   "category": "Productivity",
   "docsUrl": "https://dev.coursera.com/get-started",
-  "baseUrl": "https://api.coursera.com/ent",
+  "baseUrl": "https://api.coursera.org",
   "authConfig": {
     "type": "custom",
     "config": {

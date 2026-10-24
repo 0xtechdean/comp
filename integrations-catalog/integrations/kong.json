@@ -4,17 +4,23 @@
   "description": "Monitor Kong API gateway for team access and role-based API management compliance",
   "category": "Infrastructure",
   "docsUrl": "https://docs.konghq.com/konnect/api/",
-  "baseUrl": "https://global.api.konghq.com/",
+  "baseUrl": "https://us.api.konghq.com",
   "authConfig": {
-    "type": "api_key",
+    "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to Kong Konnect at https://cloud.konghq.com\n2. Go to Personal Access Tokens\n3. Generate a new token\n4. Copy and enter it below",
+      "setupInstructions": "1. Log in to Kong Konnect at https://cloud.konghq.com (or eu.cloud / au.cloud for those regions)\n2. Click your profile > Personal Access Tokens\n3. Click \"Generate Token\", name it (e.g. \"Comp AI\"), and copy the token (starts with kpat_)\n4. Paste the token below and select the region matching your Konnect tenant\n\nThe token inherits the permissions of the user that generated it; an Organization Admin or read-only auditor role is sufficient.",
       "credentialFields": [
         {
           "label": "Personal Access Token",
           "type": "password",
           "required": true,
-          "helpText": "Found in Kong Konnect → Personal Access Tokens"
+          "helpText": "Generate at Kong Konnect > Personal Access Tokens (starts with kpat_...)."
+        },
+        {
+          "label": "Region",
+          "type": "select",
+          "required": true,
+          "helpText": "Pick the region shown in your Konnect URL (e.g. cloud.konghq.com vs eu.cloud.konghq.com)."
         }
       ]
     }

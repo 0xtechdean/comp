@@ -8,7 +8,7 @@
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Find your Account Identifier from your Snowflake URL:\n   https://<account_identifier>.snowflakecomputing.com\n   Example: 'myorg-myaccount'\n\n2. Set up a Network Policy:\n   Snowflake requires a network policy to use Programmatic Access Tokens.\n   In your Snowflake account, create a network policy that includes CompAI's IP address: 54.159.77.69\n   Then assign that network policy to the user who will generate the token.\n\n3. Generate a Programmatic Access Token (PAT):\n   Option A - In Snowsight, go to Admin > Users & Roles > select your user > Generate Token\n   Option B - Use SQL to create a token for your user\n\n   Note: The user's authentication policy must allow PATs. If you're having trouble generating a token, check your authentication policy settings.\n\n4. Copy the token and paste both values below.",
+      "setupInstructions": "1. Find your Account Identifier — the part before \".snowflakecomputing.com\" in your Snowflake URL, in the form \"myorg-myaccount\" (e.g. from https://myorg-myaccount.snowflakecomputing.com).\n\n2. Allow CompAI's IP (required to use the token):\n   Snowflake requires the token's user to be covered by a network policy to generate and use a Programmatic Access Token. Create or update a network policy that allows CompAI's IP address 54.159.77.69, and assign it to that user.\n   (Alternatively, choose \"Bypass requirement for network policy\" in the token dialog when generating.)\n\n3. Generate a Programmatic Access Token (PAT) in Snowsight:\n   Generate it for a user with the SECURITYADMIN role (or ACCOUNTADMIN) — listing users requires the MANAGE GRANTS privilege that these roles have, which also lets the integration see your databases.\n   In the left nav, open \"Users & roles\" (under \"Governance & security\", or under \"Admin\" in some accounts) → select that user → under \"Programmatic access tokens\" click \"Generate new token\". Name it, set an expiration, and if you set a role restriction (\"One specific role\") choose SECURITYADMIN. Click Generate and copy the token (it is shown only once).\n\n4. Paste your Account Identifier and the token below.\n\nComp AI uses this token read-only and never makes changes to your Snowflake account.",
       "credentialFields": [
         {
           "label": "Account Identifier",
@@ -20,7 +20,7 @@
           "label": "Programmatic Access Token (PAT)",
           "type": "password",
           "required": true,
-          "helpText": "Generate via Snowsight: Admin → Users → select user → Generate Token. Or SQL: ALTER USER <user> ADD PROGRAMMATIC ACCESS TOKEN <name> DAYS_TO_EXPIRY = 30."
+          "helpText": "Generate in Snowsight: open \"Users & roles\" (under \"Governance & security\", or \"Admin\" in some accounts) → select a user with the SECURITYADMIN or ACCOUNTADMIN role → Programmatic access tokens → Generate new token. The user must be covered by a network policy that allows CompAI's IP (54.159.77.69), or choose \"Bypass requirement for network policy\" when generating."
         }
       ]
     }

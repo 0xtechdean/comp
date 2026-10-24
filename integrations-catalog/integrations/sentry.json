@@ -8,7 +8,7 @@
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to Sentry\n2. Go to Settings > Developer Settings > Internal Integrations\n3. Create a new internal integration\n4. Set permissions: Organization: Read, Project: Read, and Alert Rule: Read\n5. Click Save, then copy the generated token",
+      "setupInstructions": "Step 1 — Create a Sentry Auth Token\n1. In Sentry, go to Settings > Auth Tokens (https://sentry.io/settings/account/api/auth-tokens/) — or for organizations: Settings > Developer Settings > User Auth Tokens\n2. Click Create New Token\n3. Add these scopes (read-only):\n   - org:read       (list organizations)\n   - project:read   (list projects)\n   - alerts:read    (read alert rules + monitoring config)\n   - member:read    (optional: read org members)\n4. Copy the token (starts with \"sntryu_\" for user tokens, \"sntrys_\" for org internal-integration tokens)\n\nStep 2 — Paste the token + your organization slug below\n\nSentry Region: This integration currently uses https://sentry.io (US). If you're on Sentry EU (de.sentry.io) or self-hosted Sentry, contact support — multi-region support is planned.",
       "credentialFields": [
         {
           "label": "Auth Token",

@@ -8,13 +8,13 @@
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to Cloudflare Dashboard at https://dash.cloudflare.com.\n2. Go to My Profile > API Tokens > Create Token.\n3. Create a custom token with the following Zone permissions:\n   - Zone > Zone Settings > Read\n   - Zone > Zone > Read\n   - Zone > WAF > Read\n4. Set Zone Resources to 'All zones' (or select specific zones you want to monitor).\n5. Copy the token and enter it below.\n6. Copy the Zone ID(s) from each domain's overview page (right sidebar). You can enter multiple Zone IDs separated by commas.",
+      "setupInstructions": "1. Log in to the Cloudflare Dashboard at https://dash.cloudflare.com.\n2. Go to My Profile > API Tokens > Create Token > Create Custom Token.\n3. Grant these permissions:\n   - Zone > Zone > Read\n   - Zone > Zone Settings > Read\n   - Zone > WAF > Read\n   - (optional) Zone > SSL and Certificates > Read — enables TLS certificate detail in the TLS/HTTPS check\n4. Set Zone Resources to 'All zones' (recommended — lets Comp AI auto-detect every domain).\n5. Click Continue to summary > Create Token, copy the generated token, and paste it below. That's it — Comp AI automatically discovers the zones (domains) your token can access; you do NOT need to enter Zone IDs.\n\nIMPORTANT — use an API Token, NOT the Global API Key:\n - This integration only works with a Cloudflare API Token (created via the Create Token button above).\n - Do NOT paste the Global API Key — it appears lower on the same 'API Tokens' page under the 'API Keys' section (a 37-character key with a View button). It is a different, legacy credential type and Cloudflare will reject it here, causing every check to fail with an authorization error.\n\nNotes:\n - A Cloudflare 'zone' is a DNS domain (e.g. example.com). These checks monitor domain security: TLS/SSL mode, WAF, and zone status.\n - Cloudflare Workers and Pages are account-scoped and have no zones, so they are not covered by these checks.\n - To limit monitoring to specific domains, you can optionally enter their Zone IDs (comma-separated) in the Zone IDs field; otherwise all accessible zones are monitored.",
       "credentialFields": [
         {
           "label": "API Token",
           "type": "password",
           "required": true,
-          "helpText": "Found in Cloudflare Dashboard > My Profile > API Tokens. Create a custom token with Zone Settings:Read, Zone:Read, and Zone WAF:Read permissions for all zones you want to monitor."
+          "helpText": "Create a custom API Token in Cloudflare Dashboard > My Profile > API Tokens > Create Token, with Zone:Read, Zone Settings:Read, and Zone WAF:Read for all zones you want to monitor. Must be an API Token — NOT the Global API Key shown in the 'API Keys' section of the same page (the Global API Key will be rejected)."
         }
       ]
     }

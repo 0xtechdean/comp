@@ -8,7 +8,7 @@
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Go to Azure Portal → Microsoft Entra ID → App registrations\n2. Click 'New registration', name it 'CompAI Integration'\n3. Under API permissions, add Microsoft Graph (Application):\n   - User.Read.All\n   - Directory.Read.All\n   - AuditLog.Read.All\n4. Click 'Grant admin consent'\n5. Go to Certificates & secrets → New client secret\n6. Copy the Tenant ID, Application ID, and Client Secret below",
+      "setupInstructions": "1. Go to Azure Portal → Microsoft Entra ID → App registrations\n2. Click 'New registration', name it 'CompAI Integration'\n3. Under API permissions → Add a permission → Microsoft Graph → Application permissions, add:\n   - User.Read.All\n   - Directory.Read.All\n   - AuditLog.Read.All\n   - AccessReview.Read.All\n4. Click 'Grant admin consent'\n5. Go to Certificates & secrets → New client secret, copy the value (only shown once)\n6. From the app Overview page, copy the Tenant ID and Application (Client) ID\n7. Paste the Tenant ID, Application ID, and Client Secret below\n\nNote: Access Reviews require Microsoft Entra ID P2 (or Microsoft Entra ID Governance) licensing.",
       "credentialFields": [
         {
           "label": "Tenant ID",

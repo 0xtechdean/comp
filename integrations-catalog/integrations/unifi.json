@@ -4,7 +4,7 @@
   "description": "Ubiquiti UniFi network management platform. Monitors hosts, sites, devices, firewall policies, and ISP connectivity through the official UniFi Site Manager and Network APIs.",
   "category": "Infrastructure",
   "docsUrl": "https://developer.ui.com/site-manager/v1.0.0/gettingstarted",
-  "baseUrl": null,
+  "baseUrl": "https://api.ui.com",
   "authConfig": {
     "type": "custom",
     "config": {

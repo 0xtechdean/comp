@@ -8,13 +8,19 @@
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to Cycode\n2. Go to Settings → API Tokens\n3. Generate a new API token\n4. Paste it below",
+      "setupInstructions": "1. Log in to Cycode\n2. Go to Settings → API Tokens\n3. Generate a new API token — Cycode will display a Client ID and a Secret\n4. Copy both values and paste them below\n5. The token must belong to a role with read access to Projects and Violations",
       "credentialFields": [
         {
-          "label": "API Token",
+          "label": "Client ID",
+          "type": "text",
+          "required": true,
+          "helpText": "Cycode → Settings → API Tokens → Generate Token (copy the Client ID)."
+        },
+        {
+          "label": "Client Secret",
           "type": "password",
           "required": true,
-          "helpText": "Cycode → Settings → API Tokens → Generate Token"
+          "helpText": "Cycode → Settings → API Tokens → Generate Token (copy the Secret shown alongside the Client ID)."
         }
       ]
     }

@@ -8,7 +8,7 @@
   "authConfig": {
     "type": "api_key",
     "config": {
-      "setupInstructions": "1. Log in to 15Five at https://my.15five.com\n2. Go to Settings → Integrations → API\n3. Generate an API key\n4. Enter it below",
+      "setupInstructions": "1. Log in to 15Five at https://my.15five.com\n2. Go to Settings → Integrations → API\n3. Generate an API key\n4. Enter it below\n5. If you get a 401 error, try regenerating the API key (15Five keys expire 1 year from creation; API access may vary by plan tier).",
       "credentialFields": [
         {
           "label": "API Key",

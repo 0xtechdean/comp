@@ -1,0 +1,50 @@
+{
+  "slug": "xano",
+  "name": "Xano",
+  "description": "Monitor Xano backend activity — verifies API request logging and audit events via the Metadata API.",
+  "category": "Development",
+  "docsUrl": null,
+  "baseUrl": "https://app.xano.com",
+  "authConfig": {
+    "type": "custom",
+    "config": {
+      "setupInstructions": "1. Find your Xano instance base URL — the domain of your Xano instance, e.g. https://x8ki-letl-twmt.n7.xano.io (paste the domain only, no extra path). It's visible in your browser while working in Xano.\n2. Create a Metadata API access token: in Xano go to Account Settings > Metadata API > Manage Access Tokens > Generate New Access Token. Grant it at least the \"Request History\" (read) scope (add \"Audit Logs\" for change-event evidence). Copy the token — it is shown only once.\n3. (Optional) Workspace ID — leave blank to auto-detect your workspaces, or enter a specific numeric workspace ID (visible in your Xano workspace URL).\n4. Enter the instance URL and access token below.",
+      "credentialFields": [
+        {
+          "label": "Instance Base URL",
+          "type": "text",
+          "required": true,
+          "helpText": "Your Xano instance domain, e.g. https://x8ki-letl-twmt.n7.xano.io (domain only, no path)."
+        },
+        {
+          "label": "Metadata API Access Token",
+          "type": "password",
+          "required": true,
+          "helpText": "Account Settings > Metadata API > Manage Access Tokens. Needs the \"Request History\" (read) scope."
+        },
+        {
+          "label": "Workspace ID (optional)",
+          "type": "text",
+          "required": false,
+          "helpText": "Leave blank to auto-detect all workspaces, or enter a specific numeric workspace ID."
+        }
+      ]
+    }
+  },
+  "capabilities": [
+    "checks"
+  ],
+  "supportsMultipleConnections": false,
+  "syncSupported": false,
+  "checks": [
+    {
+      "slug": "xano_monitoring_alerting",
+      "name": "Monitoring & Alerting",
+      "description": "Verifies Xano is logging API request activity (and audit events) via the Metadata API request history.",
+      "defaultSeverity": "medium",
+      "enabled": true
+    }
+  ],
+  "checkCount": 1,
+  "isActive": true
+}

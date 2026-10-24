@@ -21,7 +21,8 @@
   },
   "capabilities": [
     "checks",
-    "sync"
+    "sync",
+    "device_sync"
   ],
   "supportsMultipleConnections": false,
   "syncSupported": true,

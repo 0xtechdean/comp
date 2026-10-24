@@ -8,19 +8,13 @@
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to Certn at https://app.certn.co/login\n2. Click the Partner tab in the dashboard\n3. Click Refresh Keys to generate a new Client ID and Secret\n4. Copy both values immediately (Secret is only shown once)\n5. Paste them here",
+      "setupInstructions": "1. Log in to Certn at https://app.certn.co/login\n2. Confirm your account is on CertnCentric (the current platform). If you are still on Certn Legacy, contact Certn support to migrate — the legacy API is being shut off on 2026-08-05.\n3. Go to Settings > API Keys\n4. Create a new API key and copy the value (it is only shown once)\n5. Paste the key here",
       "credentialFields": [
         {
-          "label": "Client ID",
-          "type": "text",
-          "required": true,
-          "helpText": "Found in Certn Dashboard - Partner tab - API Keys"
-        },
-        {
-          "label": "Client Secret",
+          "label": "API Key",
           "type": "password",
           "required": true,
-          "helpText": "Generated when creating/refreshing API keys in the Partner tab. Only shown once at creation time."
+          "helpText": "CertnCentric API key. Generated in Certn under Settings > API Keys."
         }
       ]
     }

@@ -52,6 +52,9 @@ jest.mock('@db', () => ({
     organization: {
       findUnique: jest.fn(),
     },
+    organizationRole: {
+      findMany: jest.fn(),
+    },
     organizationChart: {
       findUnique: jest.fn(),
       update: jest.fn(),
@@ -76,6 +79,7 @@ jest.mock('@db', () => ({
 }));
 
 jest.mock('@trycompai/auth', () => ({
+  isRestrictedRole: (role: string) => ['employee', 'contractor'].includes(role),
   BUILT_IN_ROLE_PERMISSIONS: {
     owner: {
       organization: ['read', 'update', 'delete'],
@@ -89,6 +93,8 @@ jest.mock('@trycompai/auth', () => ({
     employee: { compliance: ['required'] },
     contractor: { compliance: ['required'] },
   },
+  parseRolePermissions: (value: unknown) =>
+    typeof value === 'string' ? JSON.parse(value) : value,
 }));
 
 jest.mock('@trycompai/email', () => ({
@@ -228,7 +234,23 @@ describe('PeopleService', () => {
         createdMember,
       );
 
-      const result = await service.create('org_123', createData as any);
+      jest
+        .mocked(db.member)
+        .findFirst.mockImplementation(
+          jest.fn().mockResolvedValue({ role: 'owner' }),
+        );
+      const result = await service.create({
+        organizationId: 'org_123',
+        createData,
+        authContext: {
+          organizationId: 'org_123',
+          authType: 'session',
+          isApiKey: false,
+          isPlatformAdmin: false,
+          userId: 'usr_caller',
+          userRoles: ['owner'],
+        },
+      });
 
       expect(result).toEqual(createdMember);
       expect(MemberQueries.createMember).toHaveBeenCalledWith(
@@ -247,7 +269,18 @@ describe('PeopleService', () => {
       );
 
       await expect(
-        service.create('org_123', { userId: 'usr_dup' } as any),
+        service.create({
+          organizationId: 'org_123',
+          createData: { userId: 'usr_dup', role: 'employee' },
+          authContext: {
+            organizationId: 'org_123',
+            authType: 'api-key',
+            isApiKey: true,
+            isPlatformAdmin: false,
+            userRoles: null,
+            apiKeyScopes: ['member:create'],
+          },
+        }),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -438,7 +471,9 @@ describe('PeopleService', () => {
 
       it('propagates ConflictException from validation without wrapping', async () => {
         (validateLoginEmailChange as jest.Mock).mockRejectedValue(
-          new ConflictException('That email is already used by another account'),
+          new ConflictException(
+            'That email is already used by another account',
+          ),
         );
 
         await expect(
@@ -528,7 +563,34 @@ describe('PeopleService', () => {
           user: { name: 'Target' },
           role: 'employee',
         });
+        setCustomRoles({});
       });
+
+      const setCustomRoles = (roles: Record<string, object>) => {
+        (db.organizationRole.findMany as jest.Mock).mockImplementation(
+          (args: { where: { name: { in: string[] } } }) =>
+            Promise.resolve(
+              args.where.name.in
+                .filter((name) => Object.hasOwn(roles, name))
+                .map((name) => ({
+                  name,
+                  permissions: JSON.stringify(roles[name]),
+                })),
+            ),
+        );
+      };
+
+      const setTargetRole = (role: string) => {
+        (MemberValidator.validateMemberExists as jest.Mock).mockResolvedValue({
+          ...targetMember,
+          role,
+        });
+      };
+
+      const updateRole = (role: string) =>
+        service.updateById('mem_target', 'org_123', { role }, 'usr_caller');
+
+      const PEOPLE_EDITOR = { member: ['read', 'update'], app: ['read'] };
 
       it('should forbid admin from assigning owner role to themselves', async () => {
         const callerMember = {
@@ -585,17 +647,67 @@ describe('PeopleService', () => {
         ).rejects.toThrow(ForbiddenException);
       });
 
-      it('should forbid admin from assigning a role they do not have', async () => {
-        setupCallerMember('usr_caller', 'org_123', 'admin');
+      it('should reject a role that is neither built-in nor a custom role of the org', async () => {
+        setupCallerMember('usr_caller', 'org_123', 'owner');
 
-        await expect(
-          service.updateById(
-            'mem_target',
-            'org_123',
-            { role: 'custom_special' } as any,
-            'usr_caller',
-          ),
-        ).rejects.toThrow(ForbiddenException);
+        await expect(updateRole('custom_special')).rejects.toThrow(
+          BadRequestException,
+        );
+        expect(MemberQueries.updateMember).not.toHaveBeenCalled();
+      });
+
+      it.each(['employee', 'auditor,contractor', 'people-editor'])(
+        'should allow admin to set another admin to %s',
+        async (role) => {
+          setupCallerMember('usr_caller', 'org_123', 'admin');
+          setTargetRole('admin');
+          setCustomRoles({ 'people-editor': PEOPLE_EDITOR });
+
+          await expect(updateRole(role)).resolves.toBeDefined();
+          expect(MemberQueries.updateMember).toHaveBeenCalled();
+        },
+      );
+
+      it('should forbid admin from changing the other roles of an owner', async () => {
+        setupCallerMember('usr_caller', 'org_123', 'admin');
+        setTargetRole('owner');
+
+        await expect(updateRole('owner,auditor')).rejects.toThrow(
+          ForbiddenException,
+        );
+        expect(MemberQueries.updateMember).not.toHaveBeenCalled();
+      });
+
+      describe('partial member access (member:read+update custom role)', () => {
+        beforeEach(() => {
+          setupCallerMember('usr_caller', 'org_123', 'people-editor');
+          setCustomRoles({
+            'people-editor': PEOPLE_EDITOR,
+            'evidence-admin': { evidence: ['read', 'update'] },
+          });
+        });
+
+        it.each(['admin', 'auditor', 'evidence-admin'])(
+          'should forbid granting %s',
+          async (role) => {
+            await expect(updateRole(role)).rejects.toThrow(ForbiddenException);
+            expect(MemberQueries.updateMember).not.toHaveBeenCalled();
+          },
+        );
+
+        it('should forbid demoting a member who holds a role it cannot assign', async () => {
+          setTargetRole('admin');
+
+          await expect(updateRole('employee')).rejects.toThrow(
+            ForbiddenException,
+          );
+          expect(MemberQueries.updateMember).not.toHaveBeenCalled();
+        });
+
+        it('should allow moving an employee to contractor', async () => {
+          await expect(updateRole('contractor')).resolves.toBeDefined();
+          expect(MemberQueries.updateMember).toHaveBeenCalled();
+        });
       });
 
       it('should allow admin to assign auditor to another user', async () => {

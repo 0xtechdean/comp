@@ -8,13 +8,19 @@
   "authConfig": {
     "type": "custom",
     "config": {
-      "setupInstructions": "1. Log in to Descope\n2. Go to Settings → Company → Management API Keys\n3. Create or copy a management key\n4. Paste it below",
+      "setupInstructions": "1. Log in to your Descope console (https://app.descope.com).\n2. Copy your Project ID from Settings → Project → Project ID.\n3. Go to Settings → Company → Management Keys and create or copy a key.\n4. Paste both values below.",
       "credentialFields": [
+        {
+          "label": "Project ID",
+          "type": "text",
+          "required": true,
+          "helpText": "Descope → Settings → Project → Project ID (starts with P...)"
+        },
         {
           "label": "Management Key",
           "type": "password",
           "required": true,
-          "helpText": "Descope → Settings → Company → Management API Keys"
+          "helpText": "Descope → Settings → Company → Management Keys"
         }
       ]
     }

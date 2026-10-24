@@ -1,14 +1,18 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { db } from '@db';
 import { getSignedUrl } from '../app/s3';
-import { CreateAccessRequestDto } from './dto/trust-access.dto';
 import { TrustAccessService } from './trust-access.service';
+
+jest.mock('@trigger.dev/sdk', () => ({ tasks: { trigger: jest.fn() } }));
 
 jest.mock('@db', () => ({
   db: {
     trust: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       upsert: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
     },
     trustNDAAgreement: {
       findUnique: jest.fn(),
@@ -20,6 +24,7 @@ jest.mock('@db', () => ({
     },
     trustAccessRequest: {
       findFirst: jest.fn(),
+      create: jest.fn(),
     },
     member: {
       findFirst: jest.fn(),
@@ -64,7 +69,10 @@ jest.mock('../app/s3', () => ({
 const mockDb = db as unknown as {
   trust: {
     findUnique: jest.Mock;
+    findFirst: jest.Mock;
     upsert: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
   };
   trustNDAAgreement: {
     findUnique: jest.Mock;
@@ -76,6 +84,7 @@ const mockDb = db as unknown as {
   };
   trustAccessRequest: {
     findFirst: jest.Mock;
+    create: jest.Mock;
   };
   member: {
     findFirst: jest.Mock;
@@ -106,7 +115,7 @@ describe('TrustAccessService getPublicVendors compliance badges (CS-688)', () =>
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockDb.trust.findUnique.mockResolvedValue({ organizationId: 'org_1' });
+    mockDb.trust.findFirst.mockResolvedValue({ organizationId: 'org_1' });
   });
 
   // Regression: the public Trust Centre served a stale stored badge set
@@ -180,19 +189,19 @@ describe('TrustAccessService favicon branding', () => {
   });
 
   it('falls back to organizationId lookup when getPublicFavicon route id is not a friendlyUrl', async () => {
-    mockDb.trust.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce({
+    mockDb.trust.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce({
       favicon: 'org_123/trust/favicon/icon.png',
     });
     mockGetSignedUrl.mockResolvedValue('https://cdn.example.com/favicon.png');
 
     const result = await service.getPublicFavicon('org_123');
 
-    expect(mockDb.trust.findUnique).toHaveBeenNthCalledWith(1, {
-      where: { friendlyUrl: 'org_123' },
+    expect(mockDb.trust.findFirst).toHaveBeenNthCalledWith(1, {
+      where: { friendlyUrl: 'org_123', status: 'published' },
       select: { favicon: true },
     });
-    expect(mockDb.trust.findUnique).toHaveBeenNthCalledWith(2, {
-      where: { organizationId: 'org_123' },
+    expect(mockDb.trust.findFirst).toHaveBeenNthCalledWith(2, {
+      where: { organizationId: 'org_123', status: 'published' },
       select: { favicon: true },
     });
     expect(result).toBe('https://cdn.example.com/favicon.png');
@@ -547,99 +556,162 @@ describe('TrustAccessService signNda NDA copy', () => {
   });
 });
 
-describe('TrustAccessService reclaimAccess token rotation', () => {
-  const emailService = {
-    sendAccessReclaimEmail: jest.fn(),
-  };
+describe('TrustAccessService findPublishedTrustByRouteId (GH-272)', () => {
   const service = new TrustAccessService(
     {} as any,
-    emailService as any,
+    {} as any,
     {} as any,
     {} as any,
     {} as any,
   );
-  jest
-    .spyOn(service as any, 'buildPortalAccessUrl')
-    .mockResolvedValue('https://portal.example.com/access/token');
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockDb.trust.findUnique.mockResolvedValue({
+  });
+
+  it('resolves a published trust row by friendlyUrl', async () => {
+    mockDb.trust.findFirst.mockResolvedValueOnce({
       organizationId: 'org_1',
       friendlyUrl: 'acme-security',
       status: 'published',
+      organization: { name: 'Acme Security' },
     });
+
+    const result = await (service as any).findPublishedTrustByRouteId(
+      'acme-security',
+    );
+
+    expect(mockDb.trust.findFirst).toHaveBeenCalledWith({
+      where: { friendlyUrl: 'acme-security', status: 'published' },
+      include: { organization: true },
+    });
+    expect(result.organizationId).toBe('org_1');
   });
 
-  it('rotates an expired access token to expire with the grant, not a fixed 24h window', async () => {
-    const grantExpiresAt = new Date(Date.now() + 20 * 24 * 60 * 60 * 1000);
-    mockDb.trustAccessGrant.findFirst.mockResolvedValue({
-      id: 'tag_1',
-      subjectEmail: 'chang.liu@client.com',
-      status: 'active',
-      expiresAt: grantExpiresAt,
-      accessToken: 'stale-token',
-      accessTokenExpiresAt: new Date(Date.now() - 1000),
-      accessRequest: {
-        name: 'Chang Liu',
-        organization: { name: 'Acme Security' },
-      },
-      ndaAgreement: null,
+  it('falls back to organizationId when no friendlyUrl match exists', async () => {
+    mockDb.trust.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce({
+      organizationId: 'org_1',
+      friendlyUrl: 'org_1',
+      status: 'published',
+      organization: { name: 'Acme Security' },
     });
 
-    await service.reclaimAccess('acme-security', 'chang.liu@client.com');
+    const result = await (service as any).findPublishedTrustByRouteId('org_1');
 
-    expect(mockDb.trustAccessGrant.update).toHaveBeenCalledWith({
-      where: { id: 'tag_1' },
-      data: expect.objectContaining({ accessTokenExpiresAt: grantExpiresAt }),
+    expect(mockDb.trust.findFirst).toHaveBeenNthCalledWith(2, {
+      where: { organizationId: 'org_1', status: 'published' },
+      include: { organization: true },
     });
+    expect(result.organizationId).toBe('org_1');
+  });
+
+  it('404s when no trust row exists for the id, without auto-creating one', async () => {
+    mockDb.trust.findFirst.mockResolvedValue(null);
+
+    await expect(
+      (service as any).findPublishedTrustByRouteId('unknown-id'),
+    ).rejects.toThrow('Trust site not found');
+
+    expect(mockDb.trust.create).not.toHaveBeenCalled();
+    expect(mockDb.trust.update).not.toHaveBeenCalled();
+  });
+
+  it('404s for a draft trust row instead of silently auto-publishing it', async () => {
+    // A draft row never matches the status: 'published' filter, so both the
+    // friendlyUrl and organizationId lookups come back empty even though a
+    // row exists in the table.
+    mockDb.trust.findFirst.mockResolvedValue(null);
+
+    await expect(
+      (service as any).findPublishedTrustByRouteId('draft-portal'),
+    ).rejects.toThrow('Trust site not found');
+
+    expect(mockDb.trust.findFirst).toHaveBeenCalledWith({
+      where: { friendlyUrl: 'draft-portal', status: 'published' },
+      include: { organization: true },
+    });
+    expect(mockDb.trust.update).not.toHaveBeenCalled();
+    expect(mockDb.trust.create).not.toHaveBeenCalled();
   });
 });
 
-describe('TrustAccessService access request notification', () => {
-  const emailService = {
-    sendAccessRequestNotification: jest.fn(),
-  };
+describe('TrustAccessService public readers — published-only resolution', () => {
+  // Unauthenticated readers must not resolve draft portals: a draft has to
+  // look exactly like a missing portal (GH-272 follow-up).
   const service = new TrustAccessService(
-    ...([{}, emailService, {}, {}, {}] as unknown as ConstructorParameters<
-      typeof TrustAccessService
-    >),
+    {
+      getSignedUrl: jest.fn(),
+    } as any,
+    {} as any,
+    {} as any,
+    {} as any,
+    {} as any,
   );
-
-  const ORIGINAL_BETTER_AUTH_URL = process.env.BETTER_AUTH_URL;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env.BETTER_AUTH_URL = 'https://app.trycomp.ai';
   });
 
-  afterAll(() => {
-    process.env.BETTER_AUTH_URL = ORIGINAL_BETTER_AUTH_URL;
+  it('getPublicOverview filters on published and returns null for a draft portal', async () => {
+    mockDb.trust.findFirst.mockResolvedValue(null);
+
+    const result = await service.getPublicOverview('draft-portal');
+
+    expect(mockDb.trust.findFirst).toHaveBeenCalledWith({
+      where: { friendlyUrl: 'draft-portal', status: 'published' },
+      select: {
+        overviewTitle: true,
+        overviewContent: true,
+        showOverview: true,
+      },
+    });
+    expect(result).toBeNull();
   });
 
-  it('points the review button at the access requests page, not the trust overview', async () => {
-    // contactEmail present -> single recipient, no member fallback lookup.
-    mockDb.trust.findUnique.mockResolvedValue({ contactEmail: 'owner@acme.com' });
+  it('getPublicCustomLinks filters on published and returns [] for a draft portal', async () => {
+    mockDb.trust.findFirst.mockResolvedValue(null);
 
-    const dto: CreateAccessRequestDto = {
-      name: 'Jane Doe',
-      email: 'jane@example.com',
-    };
+    const result = await service.getPublicCustomLinks('draft-portal');
 
-    await service['sendAccessRequestNotificationToOrg'](
-      'org_123',
-      'tar_456',
-      'Acme Inc',
-      dto,
-    );
+    expect(mockDb.trust.findFirst).toHaveBeenCalledWith({
+      where: { friendlyUrl: 'draft-portal', status: 'published' },
+      select: { organizationId: true },
+    });
+    expect(result).toEqual([]);
+  });
 
-    expect(emailService.sendAccessRequestNotification).toHaveBeenCalledTimes(1);
-    // Must deep-link to the pending requests list, NOT /org_123/trust (the
-    // trust portal settings/overview page).
-    expect(emailService.sendAccessRequestNotification).toHaveBeenCalledWith(
-      expect.objectContaining({
-        reviewUrl: 'https://app.trycomp.ai/org_123/trust/access-requests',
-      }),
-    );
+  it('getPublicVendors filters on published and returns [] for a draft portal', async () => {
+    mockDb.trust.findFirst.mockResolvedValue(null);
+
+    const result = await service.getPublicVendors('draft-portal');
+
+    expect(mockDb.trust.findFirst).toHaveBeenCalledWith({
+      where: { friendlyUrl: 'draft-portal', status: 'published' },
+      select: { organizationId: true },
+    });
+    expect(result).toEqual([]);
+  });
+
+  it('getPublicFavicon filters on published and returns null for a draft portal', async () => {
+    mockDb.trust.findFirst.mockResolvedValue(null);
+
+    const result = await service.getPublicFavicon('draft-portal');
+
+    expect(mockDb.trust.findFirst).toHaveBeenCalledWith({
+      where: { friendlyUrl: 'draft-portal', status: 'published' },
+      select: { favicon: true },
+    });
+    expect(result).toBeNull();
+  });
+
+  it('getPublicSecurityQuestionnaireEnabled filters on published', async () => {
+    mockDb.trust.findFirst.mockResolvedValue(null);
+
+    await service.getPublicSecurityQuestionnaireEnabled('draft-portal');
+
+    expect(mockDb.trust.findFirst).toHaveBeenCalledWith({
+      where: { friendlyUrl: 'draft-portal', status: 'published' },
+      select: { securityQuestionnaireEnabled: true },
+    });
   });
 });

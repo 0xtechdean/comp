@@ -1,0 +1,38 @@
+{
+  "slug": "flutterflow",
+  "name": "FlutterFlow",
+  "description": "Track code-change activity across FlutterFlow projects (update counts, branches, collaborators) via the FlutterFlow Project API.",
+  "category": "Development",
+  "docsUrl": null,
+  "baseUrl": "https://api.flutterflow.io",
+  "authConfig": {
+    "type": "custom",
+    "config": {
+      "setupInstructions": "1. Sign in to FlutterFlow and open your account page: https://app.flutterflow.io/account\n2. In the API section, generate an API token. (API access requires an active paid FlutterFlow subscription.)\n3. Copy the token and paste it below.",
+      "credentialFields": [
+        {
+          "label": "API Token",
+          "type": "password",
+          "required": true,
+          "helpText": "From https://app.flutterflow.io/account (Account > API). Requires an active paid FlutterFlow subscription."
+        }
+      ]
+    }
+  },
+  "capabilities": [
+    "checks"
+  ],
+  "supportsMultipleConnections": false,
+  "syncSupported": false,
+  "checks": [
+    {
+      "slug": "flutterflow_code_changes",
+      "name": "Code Changes",
+      "description": "Verifies FlutterFlow project changes are tracked/version-controlled (update counts, branches, last-modified, collaborator access) via the Project API.",
+      "defaultSeverity": "medium",
+      "enabled": true
+    }
+  ],
+  "checkCount": 1,
+  "isActive": true
+}

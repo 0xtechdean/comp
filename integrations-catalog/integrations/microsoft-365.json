@@ -45,7 +45,7 @@
     {
       "slug": "m365_access_review_log",
       "name": "Access Review Log",
-      "description": "Verifies that Microsoft 365 directory audit logs are active and contain recent events",
+      "description": "Performs an access review of Microsoft 365 users and privileged directory roles.",
       "defaultSeverity": "high",
       "enabled": true
     }
