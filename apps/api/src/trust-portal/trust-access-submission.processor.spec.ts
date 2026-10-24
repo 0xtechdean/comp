@@ -10,6 +10,9 @@ jest.mock('@db', () => ({
   },
 }));
 jest.mock('@trigger.dev/sdk', () => ({ tasks: { trigger: jest.fn() } }));
+// The processor only needs parseRoles; the real @trycompai/auth barrel pulls in
+// better-auth, which is ESM-only and jest cannot load.
+jest.mock('@trycompai/auth', () => ({ BUILT_IN_ROLE_PERMISSIONS: {} }));
 jest.mock('./trust-access-url', () => ({
   buildTrustPortalAccessUrl: jest.fn(),
 }));

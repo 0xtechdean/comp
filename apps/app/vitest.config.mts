@@ -32,6 +32,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
+      // Listed before '@trycompai/auth': aliases match by prefix, so the barrel
+      // entry would otherwise swallow this subpath.
+      '@trycompai/auth/participation': resolve(__dirname, '../../packages/auth/src/participation.ts'),
       '@trycompai/auth': resolve(__dirname, '../../packages/auth/src/index.ts'),
       '@trycompai/billing': resolve(__dirname, '../../packages/billing/src/index.ts'),
     },
