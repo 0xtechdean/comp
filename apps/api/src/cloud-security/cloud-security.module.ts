@@ -16,6 +16,8 @@ import { AiRemediationService } from './ai-remediation.service';
 import { AiDescriptionService } from './ai-description.service';
 import { CheckDefinitionService } from './check-definition.service';
 import { CloudExceptionService } from './exception.service';
+import { CloudPrefixExceptionService } from './exception-prefix.service';
+import { CloudSecurityExceptionsController } from './cloud-security-exceptions.controller';
 import { CloudHistoryService } from './history.service';
 import { CloudAwsScanModeService } from './aws-scan-mode.service';
 import { CloudReconciliationService } from './reconciliation.service';
@@ -27,6 +29,7 @@ import { AuthModule } from '../auth/auth.module';
   imports: [forwardRef(() => IntegrationPlatformModule), AuthModule],
   controllers: [
     CloudSecurityController,
+    CloudSecurityExceptionsController,
     RemediationController,
     RemediationBatchController,
   ],
@@ -46,6 +49,7 @@ import { AuthModule } from '../auth/auth.module';
     AiDescriptionService,
     CheckDefinitionService,
     CloudExceptionService,
+    CloudPrefixExceptionService,
     CloudReconciliationService,
     CloudHistoryService,
     CloudAwsScanModeService,

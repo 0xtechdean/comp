@@ -304,20 +304,33 @@ export class CheckRunRepository {
    * Lets the task UI compute the effective (non-excepted) failure count exactly
    * WITHOUT loading every result row — only the bounded display sample is
    * hydrated; this count covers the full set. `resourceIds` is the excepted set
-   * for the run's (connection, check); callers pass an empty list (and skip the
-   * call) when nothing is excepted, which is the common case.
+   * for the run's (connection, check) and `resourceIdPrefixes` the prefixes of
+   * the class exceptions that apply to it; when both are empty, which is the
+   * common case, no query runs.
    */
   async countExceptedFailures(
     runId: string,
     resourceIds: string[],
+    resourceIdPrefixes: string[] = [],
   ): Promise<number> {
-    if (resourceIds.length === 0) return 0;
+    if (resourceIds.length === 0 && resourceIdPrefixes.length === 0) return 0;
+    if (resourceIdPrefixes.length === 0) {
+      return db.integrationCheckResult.count({
+        where: {
+          checkRunId: runId,
+          passed: false,
+          resourceId: { in: resourceIds },
+        },
+      });
+    }
+    const matches: Prisma.IntegrationCheckResultWhereInput[] = [
+      ...(resourceIds.length > 0 ? [{ resourceId: { in: resourceIds } }] : []),
+      ...resourceIdPrefixes.map((prefix) => ({
+        resourceId: { startsWith: prefix },
+      })),
+    ];
     return db.integrationCheckResult.count({
-      where: {
-        checkRunId: runId,
-        passed: false,
-        resourceId: { in: resourceIds },
-      },
+      where: { checkRunId: runId, passed: false, OR: matches },
     });
   }
 

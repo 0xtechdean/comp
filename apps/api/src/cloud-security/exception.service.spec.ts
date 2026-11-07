@@ -6,6 +6,7 @@ const dbMock = {
   integrationCheckResult: { findFirst: jest.fn() },
   findingException: {
     findFirst: jest.fn(),
+    findMany: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     upsert: jest.fn(),
@@ -337,6 +338,8 @@ describe('CloudExceptionService.revokeException', () => {
 describe('CloudExceptionService.isExceptionActive', () => {
   beforeEach(() => {
     dbMock.findingException.findFirst.mockReset();
+    dbMock.findingException.findMany.mockReset();
+    dbMock.findingException.findMany.mockResolvedValue([]);
   });
 
   it('returns true when a non-revoked, non-expired exception exists', async () => {
@@ -357,6 +360,54 @@ describe('CloudExceptionService.isExceptionActive', () => {
       connectionId: 'icn_aws',
       checkId: 'iam-no-mfa',
       resourceId: 'john',
+    });
+    expect(active).toBe(false);
+  });
+
+  it('returns true when an active prefix (class) exception covers the finding', async () => {
+    dbMock.findingException.findFirst.mockResolvedValueOnce(null);
+    dbMock.findingException.findMany.mockResolvedValueOnce([
+      {
+        checkId: 'secrets-no-rotation-cloud/stacks/dep_',
+        resourceId:
+          'arn:aws:secretsmanager:eu-central-1:111:secret:cloud/stacks/dep_',
+      },
+    ]);
+    const active = await buildService().isExceptionActive({
+      organizationId: 'org_1',
+      connectionId: 'icn_aws',
+      checkId: 'secrets-no-rotation-cloud/stacks/dep_abc',
+      resourceId:
+        'arn:aws:secretsmanager:eu-central-1:111:secret:cloud/stacks/dep_abc-Xy12',
+    });
+    expect(active).toBe(true);
+    // Only this connection's active prefix rows are considered.
+    expect(dbMock.findingException.findMany).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        organizationId: 'org_1',
+        connectionId: 'icn_aws',
+        revokedAt: null,
+        match: 'prefix',
+      }),
+      select: { checkId: true, resourceId: true },
+    });
+  });
+
+  it('returns false when a prefix exception matches the resource but not the check', async () => {
+    dbMock.findingException.findFirst.mockResolvedValueOnce(null);
+    dbMock.findingException.findMany.mockResolvedValueOnce([
+      {
+        checkId: 'secrets-no-rotation-cloud/stacks/dep_',
+        resourceId:
+          'arn:aws:secretsmanager:eu-central-1:111:secret:cloud/stacks/dep_',
+      },
+    ]);
+    const active = await buildService().isExceptionActive({
+      organizationId: 'org_1',
+      connectionId: 'icn_aws',
+      checkId: 'secrets-unused-90d',
+      resourceId:
+        'arn:aws:secretsmanager:eu-central-1:111:secret:cloud/stacks/dep_abc-Xy12',
     });
     expect(active).toBe(false);
   });

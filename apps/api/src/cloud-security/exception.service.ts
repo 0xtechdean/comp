@@ -8,6 +8,7 @@ import {
 import { db } from '@db';
 import { logCloudSecurityActivity } from './cloud-security-audit';
 import { resolveCheckKey } from './check-definition.utils';
+import { prefixRuleMatches } from './finding-exceptions';
 
 /** Minimum chars for an exception reason — meant to discourage low-effort
  * reasons like "ok" or "test". Auditors rely on this field as the
@@ -157,10 +158,10 @@ export class CloudExceptionService {
   }
 
   /**
-   * Active = exists for this (org, connection, check, resource), not
-   * revoked, and (no expiration OR expiration in the future).
-   * Used by getFindings to filter and by reconciliation to detect
-   * `exception_marked` resolutions.
+   * Active = not revoked, (no expiration OR expiration in the future), and
+   * either an exact row for this (org, connection, check, resource) or a
+   * prefix (class) row on the connection that covers it.
+   * Used by reconciliation to detect `exception_marked` resolutions.
    */
   async isExceptionActive(params: {
     organizationId: string;
@@ -168,18 +169,37 @@ export class CloudExceptionService {
     checkId: string;
     resourceId: string;
   }): Promise<boolean> {
+    const active = {
+      organizationId: params.organizationId,
+      connectionId: params.connectionId,
+      revokedAt: null,
+      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+    };
     const exception = await db.findingException.findFirst({
       where: {
-        organizationId: params.organizationId,
-        connectionId: params.connectionId,
+        ...active,
         checkId: params.checkId,
         resourceId: params.resourceId,
-        revokedAt: null,
-        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+        match: 'exact',
       },
       select: { id: true },
     });
-    return Boolean(exception);
+    if (exception) return true;
+
+    const prefixRows = await db.findingException.findMany({
+      where: { ...active, match: 'prefix' },
+      select: { checkId: true, resourceId: true },
+    });
+    return prefixRows.some((row) =>
+      prefixRuleMatches({
+        ...params,
+        rule: {
+          connectionId: params.connectionId,
+          checkIdPrefix: row.checkId,
+          resourceIdPrefix: row.resourceId,
+        },
+      }),
+    );
   }
 
   /**

@@ -342,6 +342,43 @@ describe('CheckRunRepository.countExceptedFailures', () => {
       },
     });
   });
+
+  it('adds a startsWith clause per class-exception prefix', async () => {
+    mockResultCount.mockResolvedValue(5);
+
+    const result = await repo.countExceptedFailures(
+      'icr_1',
+      ['b1'],
+      ['dep_', 'tmp-'],
+    );
+
+    expect(result).toBe(5);
+    expect(mockResultCount).toHaveBeenCalledWith({
+      where: {
+        checkRunId: 'icr_1',
+        passed: false,
+        OR: [
+          { resourceId: { in: ['b1'] } },
+          { resourceId: { startsWith: 'dep_' } },
+          { resourceId: { startsWith: 'tmp-' } },
+        ],
+      },
+    });
+  });
+
+  it('counts by prefix alone when there are no exact exceptions', async () => {
+    mockResultCount.mockResolvedValue(3);
+
+    await repo.countExceptedFailures('icr_1', [], ['dep_']);
+
+    expect(mockResultCount).toHaveBeenCalledWith({
+      where: {
+        checkRunId: 'icr_1',
+        passed: false,
+        OR: [{ resourceId: { startsWith: 'dep_' } }],
+      },
+    });
+  });
 });
 
 describe('CheckRunRepository.findLatestResultsByConnectionAndCheck', () => {

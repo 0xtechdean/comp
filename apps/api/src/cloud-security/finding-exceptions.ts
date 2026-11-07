@@ -11,8 +11,41 @@ export interface ActiveExceptionInfo {
 }
 
 /**
- * The set of findings — keyed by (connectionId, checkId, resourceId) — that
- * currently have an ACTIVE exception (not revoked, not expired) for an org.
+ * A class exception (`match: prefix`): covers every finding on its connection
+ * whose checkId starts with `checkIdPrefix` AND whose resourceId starts with
+ * `resourceIdPrefix`. Used for a finding that recurs per resource, such as one
+ * secret per deployed stack, where the check key itself carries the resource
+ * name and an exact exception would be needed for every new one.
+ */
+export interface PrefixExceptionRule {
+  connectionId: string;
+  checkIdPrefix: string;
+  resourceIdPrefix: string;
+  info: ActiveExceptionInfo;
+}
+
+/** Whether a prefix rule covers this finding. Both prefixes must match. */
+export function prefixRuleMatches(params: {
+  rule: Pick<
+    PrefixExceptionRule,
+    'connectionId' | 'checkIdPrefix' | 'resourceIdPrefix'
+  >;
+  connectionId: string;
+  checkId: string;
+  resourceId: string;
+}): boolean {
+  const { rule, connectionId, checkId, resourceId } = params;
+  return (
+    rule.connectionId === connectionId &&
+    checkId.startsWith(rule.checkIdPrefix) &&
+    resourceId.startsWith(rule.resourceIdPrefix)
+  );
+}
+
+/**
+ * The set of findings — keyed by (connectionId, checkId, resourceId), plus
+ * class exceptions matched by prefix — that currently have an ACTIVE exception
+ * (not revoked, not expired) for an org.
  *
  * This is the SINGLE source of truth for "is this finding excepted?". Every
  * place that turns a check result into a pass/fail must go through here so an
@@ -37,13 +70,17 @@ export class ActiveExceptionSet {
   /** Exception metadata per canonical key. Optional — evaluation-only callers
    *  build the set from bare keys and never ask for it. */
   private readonly infoByKey: ReadonlyMap<string, ActiveExceptionInfo>;
+  /** Class exceptions, matched by prefix after the exact keys miss. */
+  private readonly prefixRules: readonly PrefixExceptionRule[];
 
   constructor(
     keys: Iterable<string>,
     infoByKey?: ReadonlyMap<string, ActiveExceptionInfo>,
+    prefixRules: readonly PrefixExceptionRule[] = [],
   ) {
     this.keys = new Set(keys);
     this.infoByKey = infoByKey ?? new Map();
+    this.prefixRules = prefixRules;
     this.resourceIdsByConnCheck = new Map();
     for (const key of this.keys) {
       // key = `${connectionId}::${checkId}::${resourceId}`. A resourceId can
@@ -72,12 +109,14 @@ export class ActiveExceptionSet {
   }
 
   get size(): number {
-    return this.keys.size;
+    return this.keys.size + this.prefixRules.length;
   }
 
   has(connectionId: string, checkId: string, resourceId: string): boolean {
-    return this.keys.has(
-      ActiveExceptionSet.key(connectionId, checkId, resourceId),
+    return (
+      this.keys.has(
+        ActiveExceptionSet.key(connectionId, checkId, resourceId),
+      ) || this.findPrefixRule(connectionId, checkId, resourceId) !== null
     );
   }
 
@@ -94,6 +133,21 @@ export class ActiveExceptionSet {
   }
 
   /**
+   * Resource-id prefixes of the class exceptions that apply to a (connection,
+   * check) pair: those on this connection whose check-id prefix the check id
+   * starts with. Companion to {@link exceptedResourceIds} for the count query.
+   */
+  exceptedResourceIdPrefixes(connectionId: string, checkId: string): string[] {
+    return this.prefixRules
+      .filter(
+        (rule) =>
+          rule.connectionId === connectionId &&
+          checkId.startsWith(rule.checkIdPrefix),
+      )
+      .map((rule) => rule.resourceIdPrefix);
+  }
+
+  /**
    * Metadata (row id + reason) of the active exception covering this finding,
    * or null when none. Null also for sets built without metadata (bare keys) —
    * `has()` stays the authority on whether a finding is excepted.
@@ -106,6 +160,20 @@ export class ActiveExceptionSet {
     return (
       this.infoByKey.get(
         ActiveExceptionSet.key(connectionId, checkId, resourceId),
+      ) ??
+      this.findPrefixRule(connectionId, checkId, resourceId)?.info ??
+      null
+    );
+  }
+
+  private findPrefixRule(
+    connectionId: string,
+    checkId: string,
+    resourceId: string,
+  ): PrefixExceptionRule | null {
+    return (
+      this.prefixRules.find((rule) =>
+        prefixRuleMatches({ rule, connectionId, checkId, resourceId }),
       ) ?? null
     );
   }
@@ -134,16 +202,28 @@ export async function loadActiveExceptionSet(
         checkId: true,
         resourceId: true,
         reason: true,
+        match: true,
       },
     });
     const infoByKey = new Map<string, ActiveExceptionInfo>();
+    const prefixRules: PrefixExceptionRule[] = [];
     for (const e of active) {
+      const info = { id: e.id, reason: e.reason };
+      if (e.match === 'prefix') {
+        prefixRules.push({
+          connectionId: e.connectionId,
+          checkIdPrefix: e.checkId,
+          resourceIdPrefix: e.resourceId,
+          info,
+        });
+        continue;
+      }
       infoByKey.set(
         ActiveExceptionSet.key(e.connectionId, e.checkId, e.resourceId),
-        { id: e.id, reason: e.reason },
+        info,
       );
     }
-    return new ActiveExceptionSet(infoByKey.keys(), infoByKey);
+    return new ActiveExceptionSet(infoByKey.keys(), infoByKey, prefixRules);
   } catch {
     return new ActiveExceptionSet([]);
   }
