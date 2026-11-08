@@ -937,10 +937,12 @@ describe('TaskIntegrationsController', () => {
         'Bucket intentionally public: static website redirect only.',
       );
       // Exact count is computed via the targeted query, scoped to this run's
-      // excepted resourceIds (not by loading + filtering every result).
+      // excepted resourceIds (not by loading + filtering every result). No
+      // class (prefix) exception applies here, so no prefixes are passed.
       expect(mockCheckRunRepository.countExceptedFailures).toHaveBeenCalledWith(
         'icr_1',
         ['reports-bucket'],
+        [],
       );
     });
 

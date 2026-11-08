@@ -848,6 +848,10 @@ export class TaskIntegrationsController {
           await this.checkRunRepository.countExceptedFailures(
             run.id,
             exceptedResourceIds,
+            exceptions.exceptedResourceIdPrefixes(
+              run.connectionId,
+              run.checkId,
+            ),
           );
 
         // Tag each sampled result with whether it's excepted (for display);
